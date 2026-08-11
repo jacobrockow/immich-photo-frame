@@ -12,7 +12,10 @@ services:
       # Same-origin via Nginx — CORS not required. Set CORS_ORIGINS if needed.
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       DEFAULT_IMMICH_URL: ${DEFAULT_IMMICH_URL:-https://immich.example.com}
+      # Production auth/setup may connect only to DEFAULT_IMMICH_URL unless explicitly overridden.
+      ALLOW_CUSTOM_IMMICH_URLS: ${ALLOW_CUSTOM_IMMICH_URLS:-false}
       SESSION_DAYS: ${SESSION_DAYS:-30}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       KIOSK_PAGE_SIZE: ${KIOSK_PAGE_SIZE:-100}
       KIOSK_MAX_ASSETS: ${KIOSK_MAX_ASSETS:-1000}
       KIOSK_FETCH_CAP: ${KIOSK_FETCH_CAP:-3000}
