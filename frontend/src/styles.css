@@ -455,6 +455,18 @@ h2 {
   color: #07100f;
 }
 
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled,
+.touch-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.primary[aria-busy="true"] {
+  position: relative;
+}
+
 .primary.compact {
   padding: 8px 12px;
   font-size: 0.9rem;
@@ -1065,13 +1077,31 @@ select:focus {
   display: grid;
   gap: 4px;
   justify-items: center;
-  padding: 10px 14px;
+  padding: 12px 16px;
+  min-width: 7.5rem;
+  min-height: 4.5rem;
   border-radius: 14px;
   background: rgba(12, 16, 20, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
+  pointer-events: auto;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+}
+
+.gesture-guide-slot:disabled {
+  cursor: default;
+}
+
+.gesture-guide-slot:not(:disabled):active {
+  background: rgba(20, 28, 34, 0.72);
+  border-color: rgba(131, 197, 190, 0.45);
 }
 
 .gesture-guide-slot.up {

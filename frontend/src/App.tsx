@@ -1004,6 +1004,7 @@ function FrameDetailPage({
   const [people, setPeople] = useState<Person[]>([]);
   const [weatherConfigured, setWeatherConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -1049,6 +1050,7 @@ function FrameDetailPage({
   }, [frameId, user.id, user.is_admin, user.api_key_configured]);
 
   async function saveFrame(next: Frame) {
+    if (saving) return;
     if (next.source.type === "album" && !next.source.album_id) {
       setError(
         "Choose an album for this frame, or switch to Entire Immich library.",
@@ -1056,6 +1058,7 @@ function FrameDetailPage({
       return;
     }
 
+    setSaving(true);
     try {
       const wasPending = next.configured === false;
       const saved = normalizeFrame(await api.updateFrame(next));
@@ -1068,6 +1071,8 @@ function FrameDetailPage({
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -1137,8 +1142,9 @@ function FrameDetailPage({
               people={people}
               weatherConfigured={weatherConfigured}
               showOwner={Boolean(user.is_admin)}
+              saving={saving}
               onChange={setFrame}
-              onSave={saveFrame}
+              onSave={(next) => void saveFrame(next)}
               onDelete={deleteFrame}
             />
           </>
@@ -1663,6 +1669,7 @@ function FrameEditor({
   people,
   weatherConfigured,
   showOwner = false,
+  saving = false,
   onChange,
   onSave,
   onDelete,
@@ -1672,6 +1679,7 @@ function FrameEditor({
   people: Person[];
   weatherConfigured: boolean;
   showOwner?: boolean;
+  saving?: boolean;
   onChange: (frame: Frame) => void;
   onSave: (frame: Frame) => void;
   onDelete: (frame: Frame) => void;
@@ -1700,10 +1708,16 @@ function FrameEditor({
             type="button"
             className="secondary"
             onClick={openKioskOnThisBrowser}
+            disabled={saving}
           >
             Open kiosk
           </button>
-          <button type="button" className="danger" onClick={() => onDelete(frame)}>
+          <button
+            type="button"
+            className="danger"
+            onClick={() => onDelete(frame)}
+            disabled={saving}
+          >
             Delete frame
           </button>
         </div>
@@ -1730,8 +1744,14 @@ function FrameEditor({
       </div>
 
       <div className="editor-actions">
-        <button className="primary" type="button" onClick={() => onSave(frame)}>
-          Save frame
+        <button
+          className="primary"
+          type="button"
+          onClick={() => onSave(frame)}
+          disabled={saving}
+          aria-busy={saving}
+        >
+          {saving ? "Saving…" : "Save frame"}
         </button>
       </div>
     </section>
@@ -2645,6 +2665,7 @@ function Kiosk({ token }: { token: string }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [settingsMessage, setSettingsMessage] = useState("");
   const [settingsError, setSettingsError] = useState("");
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [advanceKey, setAdvanceKey] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<number | null>(null);
@@ -2952,15 +2973,16 @@ function Kiosk({ token }: { token: string }) {
   }
 
   async function saveSettings() {
-    if (!draft) return;
+    if (!draft || settingsSaving) return;
     if (draft.source.type === "album" && !draft.source.album_id) {
       setSettingsError("Choose an album, or switch to Entire Immich library.");
       return;
     }
+    setSettingsSaving(true);
+    setSettingsError("");
     try {
       const finishingSetup = draft.configured === false;
       const saved = normalizeFrame(await api.kioskUpdateFrame(token, draft));
-      setSettingsError("");
       setSettingsMessage("");
       await load();
       setDraft(saved);
@@ -2968,6 +2990,8 @@ function Kiosk({ token }: { token: string }) {
       showHint(finishingSetup ? "Setup complete" : "Settings saved");
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSettingsSaving(false);
     }
   }
 
@@ -3169,6 +3193,28 @@ function Kiosk({ token }: { token: string }) {
         <GestureGuide
           showActions={Boolean(config.frame.allow_photo_actions)}
           fading={guideFading}
+          onSettings={() => {
+            hideGestureGuide();
+            showHint("Settings");
+            void openSettings();
+          }}
+          onPrev={() => {
+            hideGestureGuide();
+            goPrev();
+          }}
+          onNext={() => {
+            hideGestureGuide();
+            goNext();
+          }}
+          onActions={
+            config.frame.allow_photo_actions
+              ? () => {
+                  if (!playlistRef.current[indexRef.current]) return;
+                  hideGestureGuide();
+                  setActionsOpen(true);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -3190,9 +3236,12 @@ function Kiosk({ token }: { token: string }) {
           token={token}
           message={settingsMessage}
           error={settingsError}
+          saving={settingsSaving}
           onChange={setDraft}
-          onSave={saveSettings}
-          onClose={() => setSettingsOpen(false)}
+          onSave={() => void saveSettings()}
+          onClose={() => {
+            if (!settingsSaving) setSettingsOpen(false);
+          }}
         />
       )}
     </div>
@@ -3279,6 +3328,7 @@ function KioskSettings({
   token,
   message,
   error,
+  saving = false,
   onChange,
   onSave,
   onClose,
@@ -3289,6 +3339,7 @@ function KioskSettings({
   token: string;
   message: string;
   error: string;
+  saving?: boolean;
   onChange: (frame: Frame) => void;
   onSave: () => void;
   onClose: () => void;
@@ -3304,7 +3355,12 @@ function KioskSettings({
             <span className="eyebrow">FRAME SETTINGS</span>
             <h2>{draft.name}</h2>
           </div>
-          <button type="button" className="secondary touch-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="secondary touch-btn"
+            onClick={onClose}
+            disabled={saving}
+          >
             Close
           </button>
         </div>
@@ -3327,8 +3383,14 @@ function KioskSettings({
         </div>
 
         <div className="kiosk-settings-footer">
-          <button className="primary touch-btn" type="button" onClick={onSave}>
-            Save settings
+          <button
+            className="primary touch-btn"
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            aria-busy={saving}
+          >
+            {saving ? "Saving…" : "Save settings"}
           </button>
         </div>
       </div>
@@ -3339,36 +3401,88 @@ function KioskSettings({
 function GestureGuide({
   showActions,
   fading,
+  onSettings,
+  onPrev,
+  onNext,
+  onActions,
 }: {
   showActions: boolean;
   fading: boolean;
+  onSettings: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onActions?: () => void;
 }) {
+  function activate(action?: () => void) {
+    return (event: PointerEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      if (fading || !action) return;
+      action();
+    };
+  }
+
   return (
-    <div
-      className={`gesture-guide${fading ? " fading" : ""}`}
-      aria-hidden="true"
-    >
-      <div className="gesture-guide-slot up">
-        <span className="gesture-guide-arrow">↑</span>
+    <div className={`gesture-guide${fading ? " fading" : ""}`}>
+      <button
+        type="button"
+        className="gesture-guide-slot up"
+        aria-label="Open settings"
+        disabled={fading}
+        onPointerDown={activate(onSettings)}
+      >
+        <span className="gesture-guide-arrow" aria-hidden="true">
+          ↑
+        </span>
         <span className="gesture-guide-label">Settings</span>
-      </div>
-      <div className="gesture-guide-slot left">
-        <span className="gesture-guide-arrow">←</span>
+      </button>
+      <button
+        type="button"
+        className="gesture-guide-slot left"
+        aria-label="Previous photo"
+        disabled={fading}
+        onPointerDown={activate(onPrev)}
+      >
+        <span className="gesture-guide-arrow" aria-hidden="true">
+          ←
+        </span>
         <span className="gesture-guide-label">Previous</span>
-      </div>
-      <div className="gesture-guide-slot right">
-        <span className="gesture-guide-arrow">→</span>
+      </button>
+      <button
+        type="button"
+        className="gesture-guide-slot right"
+        aria-label="Next photo"
+        disabled={fading}
+        onPointerDown={activate(onNext)}
+      >
+        <span className="gesture-guide-arrow" aria-hidden="true">
+          →
+        </span>
         <span className="gesture-guide-label">Next</span>
-      </div>
-      {showActions ? (
-        <div className="gesture-guide-slot down">
-          <span className="gesture-guide-arrow">↓</span>
+      </button>
+      {showActions && onActions ? (
+        <button
+          type="button"
+          className="gesture-guide-slot down"
+          aria-label="Photo actions"
+          disabled={fading}
+          onPointerDown={activate(onActions)}
+        >
+          <span className="gesture-guide-arrow" aria-hidden="true">
+            ↓
+          </span>
           <span className="gesture-guide-label">Photo actions</span>
-        </div>
+        </button>
       ) : (
-        <div className="gesture-guide-slot down muted">
+        <button
+          type="button"
+          className="gesture-guide-slot down muted"
+          aria-label="Open settings"
+          disabled={fading}
+          onPointerDown={activate(onSettings)}
+        >
           <span className="gesture-guide-label">Hold for settings</span>
-        </div>
+        </button>
       )}
     </div>
   );
