@@ -1,4 +1,8 @@
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Empty string = same-origin (production behind Nginx). Only fall back when unset.
+export const API_URL =
+  import.meta.env.VITE_API_URL === undefined
+    ? "http://localhost:8000"
+    : import.meta.env.VITE_API_URL;
 
 export type Album = {
   id: string;
@@ -311,7 +315,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 function kioskMediaUrl(path: string, token: string): string {
-  const url = new URL(`${API_URL}${path}`);
+  const url = new URL(path, API_URL || window.location.origin);
   url.searchParams.set("frame_token", token);
   return url.toString();
 }

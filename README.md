@@ -37,18 +37,19 @@ immich-photo-frame/
 ├── backend/          # FastAPI app
 ├── frontend/         # React + Vite control UI & kiosk
 ├── pi/               # Chromium kiosk install scripts
-├── compose.yml
+├── compose.yml       # Local development (UI :5173 + API :8000)
+├── compose.prod.yml  # Production (only Nginx published; /api proxied)
 ├── .env.example
 ├── README.md
 └── CURSOR_HANDOFF.md
 ```
 
-## Quick start
+## Quick start (local)
 
 Copy `.env.example` to `.env` and set at least `DEFAULT_IMMICH_URL` to your
 public Immich base URL.
 
-### Option 1: Docker / Podman Compose
+### Option 1: Docker / Podman Compose (local)
 
 ```bash
 podman compose up --build
@@ -63,6 +64,9 @@ Then open:
 - Admin users: http://localhost:5173/admin/users
 - Device setup: http://localhost:5173/setup
 - API docs: http://localhost:8000/docs
+
+The local stack publishes both the UI (`5173`) and the API (`8000`). The
+frontend is built to call `http://localhost:8000`.
 
 ### Option 2: Development mode
 
@@ -83,6 +87,34 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Production
+
+Production uses [compose.prod.yml](compose.prod.yml):
+
+- Only the frontend Nginx container is published (default host port `80`)
+- Browser calls same-origin `/api/*`; Nginx proxies to the backend on the Docker network
+- Backend is **not** exposed on the host
+- SQLite persists on the `photoframe-data` volume at `/data/photoframe.db`
+
+```bash
+cp .env.example .env
+# Set DEFAULT_IMMICH_URL, OPENWEATHER_API_KEY, etc.
+# For production, clear CORS_ORIGINS (same-origin) or set it to your public origin.
+# Optional: FRONTEND_PORT=8080
+
+podman compose -f compose.prod.yml --env-file .env up -d --build
+# or: docker compose -f compose.prod.yml --env-file .env up -d --build
+```
+
+Then open your public origin (or `http://localhost` if testing locally on port 80):
+
+- Frames / account / admin / setup / kiosk all on that single origin
+- Health check: `https://your-frame.example.com/api/health`
+
+Point Raspberry Pis at the same public origin (see [`pi/README.md`](pi/README.md)).
+TLS can terminate in front of the published port (reverse proxy / tunnel); the
+app itself has no CDN-specific logic.
 
 ## Immich connection
 

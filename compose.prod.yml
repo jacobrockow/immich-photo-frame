@@ -1,0 +1,36 @@
+# Production stack: only the frontend Nginx port is published.
+# Browser calls same-origin /api/*; Nginx proxies to backend on the Docker network.
+#
+#   podman compose -f compose.prod.yml --env-file .env up -d --build
+#   docker  compose -f compose.prod.yml --env-file .env up -d --build
+
+services:
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/photoframe.db}
+      # Same-origin via Nginx — CORS not required. Set CORS_ORIGINS if needed.
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      DEFAULT_IMMICH_URL: ${DEFAULT_IMMICH_URL:-https://immich.example.com}
+      SESSION_DAYS: ${SESSION_DAYS:-30}
+      KIOSK_PAGE_SIZE: ${KIOSK_PAGE_SIZE:-100}
+      KIOSK_MAX_ASSETS: ${KIOSK_MAX_ASSETS:-1000}
+      KIOSK_FETCH_CAP: ${KIOSK_FETCH_CAP:-3000}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+    volumes:
+      - photoframe-data:/data
+    # Not published on the host — reach backend only through frontend Nginx.
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty = same-origin /api requests in the browser.
+        VITE_API_URL: ""
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+
+volumes:
+  photoframe-data:
