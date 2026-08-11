@@ -71,7 +71,7 @@ from .services import (
     user_to_out,
     weather_api_key,
 )
-from .weather import OpenWeatherClient, WeatherError, clear_weather_cache
+from .weather import OpenWeatherClient, WeatherError, clear_weather_cache, fetch_weather_icon
 
 
 Base.metadata.create_all(bind=engine)
@@ -319,6 +319,23 @@ async def assets_for_source(
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/weather/icon/{icon_code}")
+async def weather_icon(icon_code: str):
+    """
+    Proxy OpenWeather icons so kiosk devices only need the frame server.
+    Icon codes look like 01d / 10n (validated server-side).
+    """
+    try:
+        body, content_type = await fetch_weather_icon(icon_code)
+    except WeatherError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(
+        content=body,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
 
 
 @app.get("/api/config")

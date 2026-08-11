@@ -3715,9 +3715,7 @@ function WeatherOverlay({
         ? 24
         : 22;
   const descLines = wrapWeatherDescription(weather.description, wrapAt);
-  const iconUrl = weather.icon
-    ? `https://openweathermap.org/img/wn/${weather.icon}@2x.png`
-    : null;
+  const iconUrl = weather.icon ? api.weatherIconUrl(weather.icon) : null;
 
   return (
     <div

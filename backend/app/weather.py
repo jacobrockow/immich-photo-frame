@@ -29,7 +29,11 @@ class WeatherSnapshot:
 
 
 _cache: dict[str, tuple[float, WeatherSnapshot]] = {}
+_icon_cache: dict[str, tuple[float, bytes, str]] = {}
 CACHE_TTL_SECONDS = 20 * 60
+ICON_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+ICON_CODE_RE = re.compile(r"^[0-9]{2}[dn]$")
+OWM_ICON_URL = "https://openweathermap.org/img/wn/{code}@2x.png"
 
 # OpenWeather geocoding is picky about "City, ST" with spaces; prefer City,ST,US.
 _US_STATE_ABBR = {
@@ -280,5 +284,55 @@ def _as_str(value: Any) -> str | None:
     return text or None
 
 
+def normalize_icon_code(icon: str) -> str:
+    code = (icon or "").strip().lower()
+    # Allow callers to pass "01d@2x" / "01d.png" — keep the OpenWeather code only.
+    code = code.split("@", 1)[0]
+    code = code.split(".", 1)[0]
+    if not ICON_CODE_RE.fullmatch(code):
+        raise WeatherError(f"Invalid weather icon code “{icon}”")
+    return code
+
+
+async def fetch_weather_icon(icon: str) -> tuple[bytes, str]:
+    """
+    Fetch an OpenWeather icon PNG via the server (Pi/kiosk browsers often cannot
+    reach openweathermap.org, and the CDN may 403 bare clients).
+    """
+    code = normalize_icon_code(icon)
+    cached = _icon_cache.get(code)
+    now = time.time()
+    if cached and now - cached[0] < ICON_CACHE_TTL_SECONDS:
+        return cached[1], cached[2]
+
+    url = OWM_ICON_URL.format(code=code)
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(
+                url,
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (compatible; ImmichPhotoFrame/1.0; "
+                        "+https://github.com/)"
+                    ),
+                    "Accept": "image/png,image/*;q=0.8,*/*;q=0.5",
+                },
+            )
+            response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise WeatherError(f"Weather icon fetch failed: {exc}") from exc
+
+    content_type = response.headers.get("content-type", "image/png").split(";")[0]
+    if "image" not in content_type:
+        content_type = "image/png"
+    body = response.content
+    if not body:
+        raise WeatherError("Weather icon response was empty")
+
+    _icon_cache[code] = (now, body, content_type)
+    return body, content_type
+
+
 def clear_weather_cache() -> None:
     _cache.clear()
+    _icon_cache.clear()

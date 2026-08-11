@@ -385,6 +385,9 @@ export const api = {
   personThumbnailUrl: (personId: string) =>
     `${API_URL}/api/people/${encodeURIComponent(personId)}/thumbnail`,
 
+  weatherIconUrl: (icon: string) =>
+    `${API_URL}/api/weather/icon/${encodeURIComponent(icon)}`,
+
   frameAlbums: (frameId: number) =>
     request<Album[]>(`/api/frames/${frameId}/albums`),
 
