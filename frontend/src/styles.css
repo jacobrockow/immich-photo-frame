@@ -329,13 +329,13 @@ button,
   background: rgba(5, 8, 12, 0.72);
   display: grid;
   place-items: center;
-  padding: 16px;
+  padding: 12px;
   overflow: hidden;
 }
 
 .kiosk-settings-panel {
-  width: min(640px, 100%);
-  max-height: min(92vh, 880px);
+  width: min(960px, 100%);
+  max-height: min(96vh, 980px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -349,12 +349,17 @@ button,
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 18px;
+  padding: 18px 22px;
   background: rgba(19, 23, 28, 0.98);
 }
 
 .kiosk-settings-header {
   border-bottom: 1px solid #2a333c;
+}
+
+.kiosk-settings-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
 }
 
 .kiosk-settings-footer {
@@ -365,12 +370,19 @@ button,
 .kiosk-settings-body {
   flex: 1 1 auto;
   overflow: auto;
-  padding: 14px 18px 18px;
+  padding: 16px 22px 20px;
   -webkit-overflow-scrolling: touch;
 }
 
 .kiosk-settings-body .notice {
   margin-bottom: 12px;
+}
+
+.touch-btn {
+  min-height: 48px;
+  min-width: 110px;
+  padding: 12px 18px;
+  font-size: 1rem;
 }
 
 header,
@@ -490,12 +502,58 @@ h2 {
 
 .frame-fields {
   display: grid;
-  gap: 18px;
+  gap: 14px;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding: 2px 0 4px;
+  margin: 0 -2px;
+}
+
+.settings-tab {
+  flex: 1 0 auto;
+  min-height: 48px;
+  min-width: 5.5rem;
+  padding: 12px 16px;
+  border: 1px solid #2e3842;
+  border-radius: 12px;
+  background: #11171d;
+  color: #cdd5dd;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.settings-tab.active {
+  background: #1a3330;
+  border-color: #83c5be;
+  color: #e8fffb;
+}
+
+.settings-tab-panel {
+  min-height: 220px;
+}
+
+.frame-editor-panel {
+  max-width: 960px;
+}
+
+.frame-editor-panel .editor-actions .primary,
+.frame-editor-panel .section-actions .secondary,
+.frame-editor-panel .section-actions .danger {
+  min-height: 44px;
+  padding: 11px 16px;
 }
 
 .settings-section {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .settings-section-title {
@@ -514,7 +572,7 @@ h2 {
 }
 
 .form-grid.compact {
-  gap: 12px;
+  gap: 14px;
   margin-top: 0;
 }
 
@@ -528,9 +586,9 @@ h2 {
 
 label {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   color: #cdd5dd;
-  font-size: 0.86rem;
+  font-size: 0.92rem;
 }
 
 input,
@@ -539,14 +597,21 @@ select {
   background: #0d1116;
   color: #f4f6f8;
   border: 1px solid #35404a;
-  border-radius: 9px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-height: 48px;
+  font-size: 16px;
   outline: none;
 }
 
 input:focus,
 select:focus {
   border-color: #83c5be;
+}
+
+.frame-fields input[type="range"] {
+  min-height: 32px;
+  padding: 8px 0;
 }
 
 .inline-field {
@@ -562,20 +627,21 @@ select:focus {
 .check-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .check-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 8px 12px;
+  padding: 12px 14px;
+  min-height: 48px;
   border: 1px solid #2e3842;
-  border-radius: 999px;
+  border-radius: 12px;
   background: #11171d;
   color: #e8ecf1;
-  font-size: 0.86rem;
+  font-size: 0.95rem;
 }
 
 .check-item input {
@@ -635,20 +701,20 @@ select:focus {
 
 .people-list {
   display: grid;
-  gap: 8px;
-  max-height: 280px;
+  gap: 10px;
+  max-height: min(52vh, 420px);
   overflow: auto;
   padding-right: 2px;
 }
 
 .person-row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 120px;
-  gap: 10px;
+  grid-template-columns: 48px minmax(0, 1fr) minmax(120px, 140px);
+  gap: 12px;
   align-items: center;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid #2e3842;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #0d1116;
 }
 
@@ -663,8 +729,8 @@ select:focus {
 }
 
 .person-thumb {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   object-fit: cover;
   background: #1a222b;
@@ -679,11 +745,12 @@ select:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #e8ecf1;
-  font-size: 0.92rem;
+  font-size: 1rem;
 }
 
 .person-mode {
-  padding: 8px 10px;
+  padding: 10px 12px;
+  min-height: 44px;
 }
 
 .toggles {
@@ -1805,5 +1872,14 @@ label.checkbox input {
 
   header {
     align-items: flex-end;
+  }
+
+  .settings-tab {
+    flex: 0 0 auto;
+  }
+
+  .kiosk-settings-panel {
+    width: min(100%, 960px);
+    max-height: 98vh;
   }
 }

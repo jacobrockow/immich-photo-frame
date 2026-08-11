@@ -1685,7 +1685,7 @@ function FrameEditor({
   }
 
   return (
-    <section className="panel">
+    <section className="panel frame-editor-panel">
       <div className="section-heading">
         <div>
           <span className="eyebrow">FRAME PROFILE</span>
@@ -1825,450 +1825,493 @@ function FrameFields({
     );
   }
 
+  const settingsTabs = [
+    { id: "photos", label: "Photos" },
+    { id: "display", label: "Display" },
+    { id: "look", label: "Look" },
+    { id: "motion", label: "Motion" },
+    { id: "people", label: "People" },
+  ] as const;
+  type SettingsTab = (typeof settingsTabs)[number]["id"];
+  const [tab, setTab] = useState<SettingsTab>("photos");
+
   return (
     <div className="frame-fields">
-      <section className="settings-section">
-        <h3 className="settings-section-title">Slideshow</h3>
-        <div className="form-grid two-column compact">
-          <label>
-            Name
-            <input
-              value={frame.name}
-              onChange={(e) => onChange({ ...frame, name: e.target.value })}
-            />
-          </label>
+      <div className="settings-tabs" role="tablist" aria-label="Frame settings">
+        {settingsTabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            className={`settings-tab${tab === item.id ? " active" : ""}`}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
-          <label>
-            Photo source
-            <select
-              value={frame.source.type}
-              onChange={(e) => {
-                const type = e.target.value as PhotoSource["type"];
-                const source: PhotoSource =
-                  type === "library"
-                    ? { type: "library" }
-                    : {
-                        type: "album",
-                        album_id:
-                          frame.source.type === "album"
-                            ? frame.source.album_id
-                            : albums[0]?.id || "",
-                      };
-                onChange({ ...frame, source });
-              }}
-            >
-              <option value="library">Entire Immich library</option>
-              <option value="album">Single album</option>
-            </select>
-          </label>
-
-          {frame.source.type === "album" && (
-            <label className="span-2">
-              Album
-              <select
-                value={frame.source.album_id}
-                onChange={(e) =>
-                  onChange({
-                    ...frame,
-                    source: { type: "album", album_id: e.target.value },
-                  })
-                }
-              >
-                <option value="">Choose an album</option>
-                {albums.map((album) => (
-                  <option value={album.id} key={album.id}>
-                    {album.albumName} ({album.assetCount})
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <label>
-            Change every
-            <div className="inline-field">
-              <input
-                type="number"
-                min={3}
-                value={frame.interval_seconds}
-                onChange={(e) =>
-                  onChange({
-                    ...frame,
-                    interval_seconds: Number(e.target.value),
-                  })
-                }
-              />
-              <span>sec</span>
-            </div>
-          </label>
-
-          <label>
-            Photo fit
-            <select
-              value={frame.image_fit}
-              onChange={(e) =>
-                onChange({
-                  ...frame,
-                  image_fit: e.target.value as "contain" | "cover",
-                })
-              }
-            >
-              <option value="contain">Contain</option>
-              <option value="cover">Fill / crop</option>
-            </select>
-          </label>
-
-          <label className="span-2">
-            Seasonal weighting
-            <div className="slider-field">
-              <input
-                type="range"
-                min={0}
-                max={5}
-                step={1}
-                value={Math.max(0, Math.min(5, frame.seasonal_strength ?? 3))}
-                onChange={(e) =>
-                  onChange({
-                    ...frame,
-                    seasonal_strength: Number(e.target.value),
-                  })
-                }
-              />
-              <div className="slider-meta">
-                <span className="slider-ends">
-                  <span>Off</span>
-                  <span>Mostly seasonal</span>
-                </span>
-                <span className="slider-value">
-                  {
-                    SEASONAL_STRENGTH_LABELS[
-                      Math.max(0, Math.min(5, frame.seasonal_strength ?? 3))
-                    ]
-                  }
-                </span>
-              </div>
-              <span className="field-hint">
-                Boosts photos from around today&apos;s date in past years.
-                Turn up for holidays; turn down when the season matters less.
-              </span>
-            </div>
-          </label>
-        </div>
-      </section>
-
-      <section className="settings-section">
-        <h3 className="settings-section-title">On-screen display</h3>
-        <div className="form-grid two-column compact">
-          <label>
-            Clock
-            {placementSelect(clockPlacement, setClockPlacement)}
-          </label>
-
-          {frame.show_clock && (
-            <>
+      <div className="settings-tab-panel" role="tabpanel">
+        {tab === "photos" && (
+          <section className="settings-section">
+            <div className="form-grid two-column compact">
               <label>
-                Clock size
-                <ScaleSelect
-                  value={overlay.clock_scale}
-                  onChange={(clock_scale) =>
-                    onChange(withOverlay(frame, { clock_scale }))
-                  }
+                Name
+                <input
+                  value={frame.name}
+                  inputMode="text"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  onChange={(e) => onChange({ ...frame, name: e.target.value })}
                 />
               </label>
+
               <label>
-                Clock style
+                Photo source
                 <select
-                  value={clockTimeValue}
-                  onChange={(e) => setClockTimeStyle(e.target.value)}
+                  value={frame.source.type}
+                  onChange={(e) => {
+                    const type = e.target.value as PhotoSource["type"];
+                    const source: PhotoSource =
+                      type === "library"
+                        ? { type: "library" }
+                        : {
+                            type: "album",
+                            album_id:
+                              frame.source.type === "album"
+                                ? frame.source.album_id
+                                : albums[0]?.id || "",
+                          };
+                    onChange({ ...frame, source });
+                  }}
                 >
-                  <option value="12h">12-hour</option>
-                  <option value="12h+s">12-hour with seconds</option>
-                  <option value="24h">24-hour</option>
-                  <option value="24h+s">24-hour with seconds</option>
+                  <option value="library">Entire Immich library</option>
+                  <option value="album">Single album</option>
                 </select>
               </label>
-              <label>
-                Date under clock
-                <select
-                  value={overlay.clock_date_format}
-                  onChange={(e) =>
-                    onChange(
-                      withOverlay(frame, {
-                        clock_date_format: e.target
-                          .value as OverlaySettings["clock_date_format"],
-                      }),
-                    )
-                  }
-                >
-                  <option value="long">Monday, August 10</option>
-                  <option value="short">Aug 10</option>
-                  <option value="weekday">Weekday only</option>
-                  <option value="none">Hidden</option>
-                </select>
-              </label>
-            </>
-          )}
 
-          <label>
-            Photo info
-            {placementSelect(photoInfoPlacement, setPhotoInfoPlacement)}
-          </label>
-
-          {photoInfoVisible && (
-            <>
-              <label>
-                Photo info size
-                <ScaleSelect
-                  value={overlay.photo_meta_scale}
-                  onChange={(photo_meta_scale) =>
-                    onChange(withOverlay(frame, { photo_meta_scale }))
-                  }
-                />
-              </label>
-              <label>
-                Show in photo info
-                <div className="check-row">
-                  <label className="check-item">
-                    <input
-                      type="checkbox"
-                      checked={frame.show_photo_date}
-                      onChange={(e) => {
-                        const show_photo_date = e.target.checked;
-                        const show_photo_location =
-                          frame.show_photo_location !== false;
-                        if (!show_photo_date && !show_photo_location) {
-                          onChange({
-                            ...frame,
-                            show_photo_date: false,
-                            show_photo_location: false,
-                          });
-                          return;
-                        }
-                        onChange({ ...frame, show_photo_date });
-                      }}
-                    />
-                    Date
-                  </label>
-                  <label className="check-item">
-                    <input
-                      type="checkbox"
-                      checked={frame.show_photo_location !== false}
-                      onChange={(e) => {
-                        const show_photo_location = e.target.checked;
-                        if (!frame.show_photo_date && !show_photo_location) {
-                          onChange({
-                            ...frame,
-                            show_photo_date: false,
-                            show_photo_location: false,
-                          });
-                          return;
-                        }
-                        onChange({ ...frame, show_photo_location });
-                      }}
-                    />
-                    Location
-                  </label>
-                </div>
-              </label>
-              {frame.show_photo_date && (
-                <label>
-                  Photo date format
+              {frame.source.type === "album" && (
+                <label className="span-2">
+                  Album
                   <select
-                    value={overlay.photo_date_format}
+                    value={frame.source.album_id}
                     onChange={(e) =>
-                      onChange(
-                        withOverlay(frame, {
-                          photo_date_format: e.target
-                            .value as OverlaySettings["photo_date_format"],
-                        }),
-                      )
+                      onChange({
+                        ...frame,
+                        source: { type: "album", album_id: e.target.value },
+                      })
                     }
                   >
-                    <option value="long">August 10, 2024</option>
-                    <option value="short">Aug 10, 2024</option>
-                    <option value="numeric">8/10/2024</option>
+                    <option value="">Choose an album</option>
+                    {albums.map((album) => (
+                      <option value={album.id} key={album.id}>
+                        {album.albumName} ({album.assetCount})
+                      </option>
+                    ))}
                   </select>
                 </label>
               )}
-            </>
-          )}
 
-          <label>
-            Weather
-            {placementSelect(weatherPlacement, setWeatherPlacement)}
-          </label>
-
-          {frame.show_weather && (
-            <>
               <label>
-                Weather size
-                <ScaleSelect
-                  value={overlay.weather_scale}
-                  onChange={(weather_scale) =>
-                    onChange(withOverlay(frame, { weather_scale }))
-                  }
-                />
+                Change every
+                <div className="inline-field">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={3}
+                    value={frame.interval_seconds}
+                    onChange={(e) =>
+                      onChange({
+                        ...frame,
+                        interval_seconds: Number(e.target.value),
+                      })
+                    }
+                  />
+                  <span>sec</span>
+                </div>
               </label>
+
               <label>
-                Weather location
-                <input
-                  value={frame.weather_location || ""}
+                Photo fit
+                <select
+                  value={frame.image_fit}
                   onChange={(e) =>
-                    onChange({ ...frame, weather_location: e.target.value })
+                    onChange({
+                      ...frame,
+                      image_fit: e.target.value as "contain" | "cover",
+                    })
                   }
-                  placeholder="Raleigh, NC"
-                />
-                {!weatherConfigured && (
-                  <span className="field-hint">
-                    Ask a server admin to add an OpenWeather API key first.
-                  </span>
-                )}
+                >
+                  <option value="contain">Contain</option>
+                  <option value="cover">Fill / crop</option>
+                </select>
               </label>
-            </>
-          )}
-        </div>
-      </section>
 
-      <section className="settings-section">
-        <h3 className="settings-section-title">Look</h3>
-        <div className="form-grid two-column compact">
-          <label className="span-2">
-            Font
-            <select
-              value={overlay.font}
-              onChange={(e) =>
-                onChange(
-                  withOverlay(frame, {
-                    font: e.target.value as OverlaySettings["font"],
-                  }),
-                )
-              }
-            >
-              <option value="sans">Sans — Source Sans</option>
-              <option value="serif">Serif — Source Serif</option>
-              <option value="rounded">Rounded — Nunito</option>
-              <option value="mono">Mono — IBM Plex</option>
-              <option value="display">Display — Fraunces</option>
-              <option value="script">Script — Caveat</option>
-              <option value="slab">Slab — Zilla Slab</option>
-              <option value="pixel">Pixel — VT323</option>
-              <option value="hand">Hand — Patrick Hand</option>
-              <option value="condensed">Condensed — Bebas Neue</option>
-              <option value="segment">Segment — 7-segment clock</option>
-            </select>
-          </label>
-
-          <label>
-            Text color
-            <select
-              value={overlay.text_color}
-              onChange={(e) =>
-                onChange(
-                  withOverlay(frame, {
-                    text_color: e.target
-                      .value as OverlaySettings["text_color"],
-                  }),
-                )
-              }
-            >
-              <option value="white">White</option>
-              <option value="warm">Warm white</option>
-              <option value="amber">Amber LCD</option>
-              <option value="mint">Mint LCD</option>
-              <option value="soft">Soft gray</option>
-            </select>
-          </label>
-
-          <label>
-            Contrast
-            <select
-              value={overlay.contrast}
-              onChange={(e) =>
-                onChange(
-                  withOverlay(frame, {
-                    contrast: e.target.value as OverlaySettings["contrast"],
-                  }),
-                )
-              }
-            >
-              <option value="none">None</option>
-              <option value="soft">Soft shadow</option>
-              <option value="heavy">Heavy shadow</option>
-              <option value="pill">Scrim pill</option>
-              <option value="bar">Glass bar</option>
-            </select>
-          </label>
-
-          <label className="span-2">
-            Text &amp; icon opacity
-            <div className="slider-field">
-              <input
-                type="range"
-                min={40}
-                max={100}
-                step={5}
-                value={overlay.opacity}
-                onChange={(e) =>
-                  onChange(
-                    withOverlay(frame, {
-                      opacity: Number(e.target.value),
-                    }),
-                  )
-                }
-              />
-              <div className="slider-meta">
-                <span className="slider-ends">
-                  <span>Let photo win</span>
-                  <span>Solid</span>
-                </span>
-                <span className="slider-value">{overlay.opacity}%</span>
-              </div>
+              <label className="span-2">
+                Seasonal weighting
+                <div className="slider-field">
+                  <input
+                    type="range"
+                    min={0}
+                    max={5}
+                    step={1}
+                    value={Math.max(0, Math.min(5, frame.seasonal_strength ?? 3))}
+                    onChange={(e) =>
+                      onChange({
+                        ...frame,
+                        seasonal_strength: Number(e.target.value),
+                      })
+                    }
+                  />
+                  <div className="slider-meta">
+                    <span className="slider-ends">
+                      <span>Off</span>
+                      <span>Mostly seasonal</span>
+                    </span>
+                    <span className="slider-value">
+                      {
+                        SEASONAL_STRENGTH_LABELS[
+                          Math.max(0, Math.min(5, frame.seasonal_strength ?? 3))
+                        ]
+                      }
+                    </span>
+                  </div>
+                  <span className="field-hint">
+                    Boosts photos from around today&apos;s date in past years.
+                    Turn up for holidays; turn down when the season matters less.
+                  </span>
+                </div>
+              </label>
             </div>
-          </label>
+          </section>
+        )}
 
-          {(overlay.contrast === "pill" || overlay.contrast === "bar") && (
-            <label className="span-2">
-              Background opacity
-              <div className="slider-field">
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={overlay.scrim_opacity}
+        {tab === "display" && (
+          <section className="settings-section">
+            <div className="form-grid two-column compact">
+              <label>
+                Clock
+                {placementSelect(clockPlacement, setClockPlacement)}
+              </label>
+
+              {frame.show_clock && (
+                <>
+                  <label>
+                    Clock size
+                    <ScaleSelect
+                      value={overlay.clock_scale}
+                      onChange={(clock_scale) =>
+                        onChange(withOverlay(frame, { clock_scale }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Clock style
+                    <select
+                      value={clockTimeValue}
+                      onChange={(e) => setClockTimeStyle(e.target.value)}
+                    >
+                      <option value="12h">12-hour</option>
+                      <option value="12h+s">12-hour with seconds</option>
+                      <option value="24h">24-hour</option>
+                      <option value="24h+s">24-hour with seconds</option>
+                    </select>
+                  </label>
+                  <label>
+                    Date under clock
+                    <select
+                      value={overlay.clock_date_format}
+                      onChange={(e) =>
+                        onChange(
+                          withOverlay(frame, {
+                            clock_date_format: e.target
+                              .value as OverlaySettings["clock_date_format"],
+                          }),
+                        )
+                      }
+                    >
+                      <option value="long">Monday, August 10</option>
+                      <option value="short">Aug 10</option>
+                      <option value="weekday">Weekday only</option>
+                      <option value="none">Hidden</option>
+                    </select>
+                  </label>
+                </>
+              )}
+
+              <label>
+                Photo info
+                {placementSelect(photoInfoPlacement, setPhotoInfoPlacement)}
+              </label>
+
+              {photoInfoVisible && (
+                <>
+                  <label>
+                    Photo info size
+                    <ScaleSelect
+                      value={overlay.photo_meta_scale}
+                      onChange={(photo_meta_scale) =>
+                        onChange(withOverlay(frame, { photo_meta_scale }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Show in photo info
+                    <div className="check-row">
+                      <label className="check-item">
+                        <input
+                          type="checkbox"
+                          checked={frame.show_photo_date}
+                          onChange={(e) => {
+                            const show_photo_date = e.target.checked;
+                            const show_photo_location =
+                              frame.show_photo_location !== false;
+                            if (!show_photo_date && !show_photo_location) {
+                              onChange({
+                                ...frame,
+                                show_photo_date: false,
+                                show_photo_location: false,
+                              });
+                              return;
+                            }
+                            onChange({ ...frame, show_photo_date });
+                          }}
+                        />
+                        Date
+                      </label>
+                      <label className="check-item">
+                        <input
+                          type="checkbox"
+                          checked={frame.show_photo_location !== false}
+                          onChange={(e) => {
+                            const show_photo_location = e.target.checked;
+                            if (!frame.show_photo_date && !show_photo_location) {
+                              onChange({
+                                ...frame,
+                                show_photo_date: false,
+                                show_photo_location: false,
+                              });
+                              return;
+                            }
+                            onChange({ ...frame, show_photo_location });
+                          }}
+                        />
+                        Location
+                      </label>
+                    </div>
+                  </label>
+                  {frame.show_photo_date && (
+                    <label>
+                      Photo date format
+                      <select
+                        value={overlay.photo_date_format}
+                        onChange={(e) =>
+                          onChange(
+                            withOverlay(frame, {
+                              photo_date_format: e.target
+                                .value as OverlaySettings["photo_date_format"],
+                            }),
+                          )
+                        }
+                      >
+                        <option value="long">August 10, 2024</option>
+                        <option value="short">Aug 10, 2024</option>
+                        <option value="numeric">8/10/2024</option>
+                      </select>
+                    </label>
+                  )}
+                </>
+              )}
+
+              <label>
+                Weather
+                {placementSelect(weatherPlacement, setWeatherPlacement)}
+              </label>
+
+              {frame.show_weather && (
+                <>
+                  <label>
+                    Weather size
+                    <ScaleSelect
+                      value={overlay.weather_scale}
+                      onChange={(weather_scale) =>
+                        onChange(withOverlay(frame, { weather_scale }))
+                      }
+                    />
+                  </label>
+                  <label className="span-2">
+                    Weather location
+                    <input
+                      value={frame.weather_location || ""}
+                      onChange={(e) =>
+                        onChange({ ...frame, weather_location: e.target.value })
+                      }
+                      placeholder="Raleigh, NC"
+                      inputMode="text"
+                      enterKeyHint="done"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                    <span className="field-hint">
+                      {weatherConfigured
+                        ? "City or city, region. On a Pi kiosk, enable the OS on-screen keyboard if tapping this field does nothing."
+                        : "Ask a server admin to add an OpenWeather API key first."}
+                    </span>
+                  </label>
+                </>
+              )}
+            </div>
+          </section>
+        )}
+
+        {tab === "look" && (
+          <section className="settings-section">
+            <div className="form-grid two-column compact">
+              <label className="span-2">
+                Font
+                <select
+                  value={overlay.font}
                   onChange={(e) =>
                     onChange(
                       withOverlay(frame, {
-                        scrim_opacity: Number(e.target.value),
+                        font: e.target.value as OverlaySettings["font"],
                       }),
                     )
                   }
-                />
-                <div className="slider-meta">
-                  <span className="slider-ends">
-                    <span>Clear</span>
-                    <span>Solid</span>
-                  </span>
-                  <span className="slider-value">{overlay.scrim_opacity}%</span>
+                >
+                  <option value="sans">Sans — Source Sans</option>
+                  <option value="serif">Serif — Source Serif</option>
+                  <option value="rounded">Rounded — Nunito</option>
+                  <option value="mono">Mono — IBM Plex</option>
+                  <option value="display">Display — Fraunces</option>
+                  <option value="script">Script — Caveat</option>
+                  <option value="slab">Slab — Zilla Slab</option>
+                  <option value="pixel">Pixel — VT323</option>
+                  <option value="hand">Hand — Patrick Hand</option>
+                  <option value="condensed">Condensed — Bebas Neue</option>
+                  <option value="segment">Segment — 7-segment clock</option>
+                </select>
+              </label>
+
+              <label>
+                Text color
+                <select
+                  value={overlay.text_color}
+                  onChange={(e) =>
+                    onChange(
+                      withOverlay(frame, {
+                        text_color: e.target
+                          .value as OverlaySettings["text_color"],
+                      }),
+                    )
+                  }
+                >
+                  <option value="white">White</option>
+                  <option value="warm">Warm white</option>
+                  <option value="amber">Amber LCD</option>
+                  <option value="mint">Mint LCD</option>
+                  <option value="soft">Soft gray</option>
+                </select>
+              </label>
+
+              <label>
+                Contrast
+                <select
+                  value={overlay.contrast}
+                  onChange={(e) =>
+                    onChange(
+                      withOverlay(frame, {
+                        contrast: e.target.value as OverlaySettings["contrast"],
+                      }),
+                    )
+                  }
+                >
+                  <option value="none">None</option>
+                  <option value="soft">Soft shadow</option>
+                  <option value="heavy">Heavy shadow</option>
+                  <option value="pill">Scrim pill</option>
+                  <option value="bar">Glass bar</option>
+                </select>
+              </label>
+
+              <label className="span-2">
+                Text &amp; icon opacity
+                <div className="slider-field">
+                  <input
+                    type="range"
+                    min={40}
+                    max={100}
+                    step={5}
+                    value={overlay.opacity}
+                    onChange={(e) =>
+                      onChange(
+                        withOverlay(frame, {
+                          opacity: Number(e.target.value),
+                        }),
+                      )
+                    }
+                  />
+                  <div className="slider-meta">
+                    <span className="slider-ends">
+                      <span>Let photo win</span>
+                      <span>Solid</span>
+                    </span>
+                    <span className="slider-value">{overlay.opacity}%</span>
+                  </div>
                 </div>
-                <span className="field-hint">
-                  Only affects the pill / glass bar behind the text.
-                </span>
-              </div>
-            </label>
-          )}
-        </div>
-      </section>
+              </label>
 
-      <SlideshowFields frame={frame} onChange={onChange} />
+              {(overlay.contrast === "pill" || overlay.contrast === "bar") && (
+                <label className="span-2">
+                  Background opacity
+                  <div className="slider-field">
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={overlay.scrim_opacity}
+                      onChange={(e) =>
+                        onChange(
+                          withOverlay(frame, {
+                            scrim_opacity: Number(e.target.value),
+                          }),
+                        )
+                      }
+                    />
+                    <div className="slider-meta">
+                      <span className="slider-ends">
+                        <span>Clear</span>
+                        <span>Solid</span>
+                      </span>
+                      <span className="slider-value">{overlay.scrim_opacity}%</span>
+                    </div>
+                    <span className="field-hint">
+                      Only affects the pill / glass bar behind the text.
+                    </span>
+                  </div>
+                </label>
+              )}
+            </div>
+          </section>
+        )}
 
-      <PeopleFilters
-        frame={frame}
-        context={context}
-        people={people}
-        personThumbnailUrl={personThumbnailUrl}
-        onChange={onChange}
-      />
+        {tab === "motion" && (
+          <SlideshowFields frame={frame} onChange={onChange} />
+        )}
+
+        {tab === "people" && (
+          <PeopleFilters
+            frame={frame}
+            context={context}
+            people={people}
+            personThumbnailUrl={personThumbnailUrl}
+            onChange={onChange}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -2284,7 +2327,6 @@ function SlideshowFields({
 
   return (
     <section className="settings-section">
-      <h3 className="settings-section-title">Slideshow motion</h3>
       <div className="form-grid two-column compact">
         <label>
           Transition
@@ -2478,7 +2520,6 @@ function PeopleFilters({
 
   return (
     <section className="settings-section">
-      <h3 className="settings-section-title">People</h3>
       <p className="field-hint people-help">
         Exclude hides photos of that person. Prefer soft-boosts photos that
         include them (without hiding everyone else).
@@ -2490,6 +2531,11 @@ function PeopleFilters({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Type a name…"
+          inputMode="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
         />
       </label>
 
@@ -3258,7 +3304,7 @@ function KioskSettings({
             <span className="eyebrow">FRAME SETTINGS</span>
             <h2>{draft.name}</h2>
           </div>
-          <button type="button" className="secondary" onClick={onClose}>
+          <button type="button" className="secondary touch-btn" onClick={onClose}>
             Close
           </button>
         </div>
@@ -3281,7 +3327,7 @@ function KioskSettings({
         </div>
 
         <div className="kiosk-settings-footer">
-          <button className="primary" type="button" onClick={onSave}>
+          <button className="primary touch-btn" type="button" onClick={onSave}>
             Save settings
           </button>
         </div>
