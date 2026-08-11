@@ -1,0 +1,16 @@
+[Unit]
+Description=Immich Photo Frame kiosk
+After=graphical.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+EnvironmentFile=-/etc/photoframe/kiosk.env
+ExecStart=/usr/local/bin/photoframe-chromium.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

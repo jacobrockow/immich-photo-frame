@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: sqlite:////data/photoframe.db
+      CORS_ORIGINS: http://localhost:5173
+      DEFAULT_IMMICH_URL: ${DEFAULT_IMMICH_URL:-https://immich.example.com}
+      SESSION_DAYS: ${SESSION_DAYS:-30}
+      KIOSK_PAGE_SIZE: ${KIOSK_PAGE_SIZE:-100}
+      KIOSK_MAX_ASSETS: ${KIOSK_MAX_ASSETS:-1000}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+    volumes:
+      - photoframe-data:/data
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  photoframe-data:
