@@ -67,7 +67,9 @@ from .services import (
     get_or_create_device,
     immich_for_user,
     migrate_legacy_immich_credentials,
+    normalize_immich_url,
     refresh_setup_code,
+    sync_user_immich_urls,
     user_to_out,
     weather_api_key,
 )
@@ -343,6 +345,7 @@ def public_config(db: Session = Depends(get_db)):
     config = get_app_config(db)
     return {
         "default_immich_url": config.default_immich_url,
+        "immich_server_name": config.immich_server_name or "Immich",
         "weather_configured": bool(weather_api_key(config)),
         "weather_units": config.weather_units or "imperial",
     }
@@ -351,6 +354,7 @@ def public_config(db: Session = Depends(get_db)):
 def server_settings_out(config) -> ServerSettingsOut:
     return ServerSettingsOut(
         default_immich_url=config.default_immich_url or "",
+        immich_server_name=config.immich_server_name or "Immich",
         weather_api_key_configured=bool(weather_api_key(config)),
         weather_units=config.weather_units or "imperial",
     )
@@ -374,12 +378,15 @@ def write_server_settings(
     del user
     config = get_app_config(db)
     if payload.default_immich_url is not None:
-        config.default_immich_url = payload.default_immich_url.strip().rstrip("/")
+        config.default_immich_url = normalize_immich_url(payload.default_immich_url)
+    if payload.immich_server_name is not None:
+        config.immich_server_name = payload.immich_server_name.strip() or "Immich"
     if payload.weather_api_key.strip():
         config.weather_api_key = payload.weather_api_key.strip()
     if payload.weather_units is not None:
         config.weather_units = payload.weather_units
     db.commit()
+    sync_user_immich_urls(db, config)
     clear_weather_cache()
     return server_settings_out(config)
 
@@ -440,6 +447,7 @@ def admin_list_users(
     db: Session = Depends(get_db),
 ):
     del admin
+    config = get_app_config(db)
     users = db.query(User).order_by(User.created_at.asc(), User.id.asc()).all()
     out: list[AdminUserOut] = []
     for row in users:
@@ -448,7 +456,7 @@ def admin_list_users(
                 id=row.id,
                 email=row.email,
                 name=row.name or row.email,
-                immich_url=row.immich_url or "",
+                immich_url=config.default_immich_url or "",
                 api_key_configured=bool(row.immich_api_key),
                 is_admin=bool(getattr(row, "is_admin", False)),
                 frame_count=db.query(Frame).filter(Frame.owner_user_id == row.id).count(),
@@ -483,12 +491,13 @@ def admin_update_user(
         db.commit()
         db.refresh(target)
 
+    config = get_app_config(db)
     del admin
     return AdminUserOut(
         id=target.id,
         email=target.email,
         name=target.name or target.email,
-        immich_url=target.immich_url or "",
+        immich_url=config.default_immich_url or "",
         api_key_configured=bool(target.immich_api_key),
         is_admin=bool(getattr(target, "is_admin", False)),
         frame_count=db.query(Frame).filter(Frame.owner_user_id == target.id).count(),
@@ -513,9 +522,9 @@ async def login_password(
     db: Session = Depends(get_db),
 ):
     config = get_app_config(db)
-    immich_url = (payload.immich_url or config.default_immich_url).rstrip("/")
+    immich_url = config.default_immich_url.rstrip("/")
     if not immich_url:
-        raise HTTPException(status_code=400, detail="Immich URL is required")
+        raise HTTPException(status_code=503, detail="Immich server is not configured")
 
     user = await connect_with_password(
         db,
@@ -534,9 +543,10 @@ async def login_api_key(
     response: Response,
     db: Session = Depends(get_db),
 ):
+    config = get_app_config(db)
     user = await connect_with_api_key(
         db,
-        immich_url=payload.immich_url.rstrip("/"),
+        immich_url=config.default_immich_url,
         immich_api_key=payload.immich_api_key,
         email_hint=payload.email,
     )
@@ -564,9 +574,10 @@ def me(user: User = Depends(require_user)):
 def read_my_immich(user: User = Depends(require_user), db: Session = Depends(get_db)):
     config = get_app_config(db)
     return ImmichSettingsOut(
-        immich_url=user.immich_url or config.default_immich_url,
+        immich_url=config.default_immich_url,
         api_key_configured=bool(user.immich_api_key),
         default_immich_url=config.default_immich_url,
+        immich_server_name=config.immich_server_name or "Immich",
     )
 
 
@@ -577,9 +588,9 @@ async def write_my_immich(
     db: Session = Depends(get_db),
 ):
     config = get_app_config(db)
-    immich_url = (payload.immich_url or config.default_immich_url or "").rstrip("/")
+    immich_url = config.default_immich_url.rstrip("/")
     if not immich_url:
-        raise HTTPException(status_code=400, detail="Immich URL is required")
+        raise HTTPException(status_code=503, detail="Immich server is not configured")
     if not payload.immich_api_key.strip():
         raise HTTPException(status_code=400, detail="Immich API key is required")
 
@@ -591,7 +602,7 @@ async def write_my_immich(
     )
     # Ensure we update the logged-in user row even if email differs slightly.
     if updated.id != user.id:
-        user.immich_url = updated.immich_url
+        user.immich_url = config.default_immich_url
         user.immich_api_key = updated.immich_api_key
         user.immich_user_id = updated.immich_user_id or user.immich_user_id
         db.commit()
@@ -599,9 +610,10 @@ async def write_my_immich(
         updated = user
 
     return ImmichSettingsOut(
-        immich_url=updated.immich_url,
+        immich_url=config.default_immich_url,
         api_key_configured=bool(updated.immich_api_key),
         default_immich_url=config.default_immich_url,
+        immich_server_name=config.immich_server_name or "Immich",
     )
 
 
@@ -738,6 +750,7 @@ def setup_start(payload: SetupStartIn, db: Session = Depends(get_db)):
             bound=True,
             frame_token=frame.token if frame else None,
             default_immich_url=config.default_immich_url,
+            immich_server_name=config.immich_server_name or "Immich",
         )
 
     device = refresh_setup_code(db, device)
@@ -748,6 +761,7 @@ def setup_start(payload: SetupStartIn, db: Session = Depends(get_db)):
         bound=False,
         frame_token=None,
         default_immich_url=config.default_immich_url,
+        immich_server_name=config.immich_server_name or "Immich",
     )
 
 
@@ -777,6 +791,7 @@ def setup_status(setup_code: str, db: Session = Depends(get_db)):
         bound=bool(frame),
         frame_token=frame.token if frame else None,
         default_immich_url=config.default_immich_url,
+        immich_server_name=config.immich_server_name or "Immich",
         device_name=device.name,
     )
 
@@ -829,9 +844,9 @@ async def setup_complete_password(
     db: Session = Depends(get_db),
 ):
     config = get_app_config(db)
-    immich_url = (payload.immich_url or config.default_immich_url).rstrip("/")
+    immich_url = config.default_immich_url.rstrip("/")
     if not immich_url:
-        raise HTTPException(status_code=400, detail="Immich URL is required")
+        raise HTTPException(status_code=503, detail="Immich server is not configured")
 
     user = await connect_with_password(
         db,
@@ -854,9 +869,10 @@ async def setup_complete_api_key(
     response: Response,
     db: Session = Depends(get_db),
 ):
+    config = get_app_config(db)
     user = await connect_with_api_key(
         db,
-        immich_url=payload.immich_url.rstrip("/"),
+        immich_url=config.default_immich_url,
         immich_api_key=payload.immich_api_key,
     )
     return await _complete_setup(
