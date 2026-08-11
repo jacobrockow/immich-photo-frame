@@ -142,6 +142,13 @@ def migrate_schema() -> None:
                 row[1]
                 for row in conn.execute(text("PRAGMA table_info(app_config)")).fetchall()
             }
+            if "immich_server_name" not in app_columns:
+                conn.execute(
+                    text(
+                        "ALTER TABLE app_config ADD COLUMN immich_server_name "
+                        "VARCHAR(255) DEFAULT 'Immich'"
+                    )
+                )
             if "weather_api_key" not in app_columns:
                 conn.execute(
                     text("ALTER TABLE app_config ADD COLUMN weather_api_key TEXT DEFAULT ''")
