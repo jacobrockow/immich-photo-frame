@@ -5,7 +5,10 @@ services:
       DATABASE_URL: sqlite:////data/photoframe.db
       CORS_ORIGINS: http://localhost:5173
       DEFAULT_IMMICH_URL: ${DEFAULT_IMMICH_URL:-https://immich.example.com}
+      ALLOW_CUSTOM_IMMICH_URLS: ${ALLOW_CUSTOM_IMMICH_URLS:-false}
       SESSION_DAYS: ${SESSION_DAYS:-30}
+      # Local compose is plain HTTP; production defaults this to true.
+      SESSION_COOKIE_SECURE: "false"
       KIOSK_PAGE_SIZE: ${KIOSK_PAGE_SIZE:-100}
       KIOSK_MAX_ASSETS: ${KIOSK_MAX_ASSETS:-1000}
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
