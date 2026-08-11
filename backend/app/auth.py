@@ -10,6 +10,12 @@ from .models import User, UserSession
 
 SESSION_COOKIE = "photoframe_session"
 SESSION_DAYS = int(os.getenv("SESSION_DAYS", "30"))
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
 
 
 def create_session(db: Session, user: User) -> str:
@@ -29,6 +35,7 @@ def set_session_cookie(response: Response, token: str) -> None:
         key=SESSION_COOKIE,
         value=token,
         httponly=True,
+        secure=SESSION_COOKIE_SECURE,
         samesite="lax",
         max_age=SESSION_DAYS * 24 * 60 * 60,
         path="/",
@@ -36,7 +43,12 @@ def set_session_cookie(response: Response, token: str) -> None:
 
 
 def clear_session_cookie(response: Response) -> None:
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=SESSION_COOKIE_SECURE,
+        samesite="lax",
+    )
 
 
 def get_optional_user(
