@@ -1,32 +1,40 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -u
 
 PHOTOFRAME_URL="${PHOTOFRAME_URL:-http://localhost:5173}"
-# Opaque kiosk path — frame token lives in the persistent Chromium profile.
-TARGET_URL="${PHOTOFRAME_URL%/}/frame"
+# /setup is the appliance entry point: unbound devices stay in setup, while
+# already-bound devices validate their saved token and continue to /frame.
+TARGET_URL="${PHOTOFRAME_URL%/}/setup"
 USER_DATA_DIR="${PHOTOFRAME_USER_DATA_DIR:-${HOME}/.config/photoframe-chromium}"
 
 mkdir -p "${USER_DATA_DIR}"
 
-# Disable screen blanking / power management when possible.
-if command -v xset >/dev/null 2>&1; then
-  xset s off || true
-  xset -dpms || true
-  xset s noblank || true
+if command -v chromium >/dev/null 2>&1; then
+  CHROMIUM_BIN="$(command -v chromium)"
+elif command -v chromium-browser >/dev/null 2>&1; then
+  CHROMIUM_BIN="$(command -v chromium-browser)"
+else
+  echo "Chromium is not installed" >&2
+  exit 1
 fi
 
-# Hide the mouse cursor after a few seconds of inactivity.
-if command -v unclutter >/dev/null 2>&1; then
-  unclutter -idle 3 -root &
-fi
+# Keep the kiosk alive if Chromium exits or crashes. labwc owns the graphical
+# session, so restarting the browser here preserves the correct Wayland env.
+while true; do
+  "${CHROMIUM_BIN}" \
+    --kiosk \
+    --ozone-platform=wayland \
+    --user-data-dir="${USER_DATA_DIR}" \
+    --no-first-run \
+    --no-default-browser-check \
+    --noerrdialogs \
+    --disable-infobars \
+    --disable-session-crashed-bubble \
+    --disable-features=Translate \
+    --check-for-update-interval=31536000 \
+    --password-store=basic \
+    --autoplay-policy=no-user-gesture-required \
+    "${TARGET_URL}"
 
-exec chromium-browser \
-  --kiosk \
-  --user-data-dir="${USER_DATA_DIR}" \
-  --noerrdialogs \
-  --disable-infobars \
-  --disable-session-crashed-bubble \
-  --check-for-update-interval=31536000 \
-  --password-store=basic \
-  --autoplay-policy=no-user-gesture-required \
-  "${TARGET_URL}"
+  sleep 3
+done
