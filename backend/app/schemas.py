@@ -57,6 +57,23 @@ OverlayFont = Literal[
     "hand",
     "condensed",
     "segment",
+    "modern",
+    "geometric",
+    "soft",
+    "light",
+    "elegant",
+    "editorial",
+    "newspaper",
+    "gothic",
+    "tall",
+    "poster",
+    "tech",
+    "typewriter",
+    "calligraphy",
+    "brush",
+    "friendly",
+    "artdeco",
+    "chalkboard",
 ]
 OverlayTextColor = Literal["white", "warm", "amber", "mint", "soft"]
 OverlayContrast = Literal["none", "soft", "heavy", "pill", "bar"]
@@ -124,7 +141,7 @@ class PersonOut(BaseModel):
 
 TransitionStyle = Literal["none", "fade", "crossfade"]
 TransitionSpeed = Literal["fast", "medium", "slow"]
-PanStyle = Literal["off", "subtle", "medium"]
+PanStyle = Literal["off", "subtle", "medium", "strong", "dramatic"]
 BackdropStyle = Literal["black", "blur", "glow"]
 
 

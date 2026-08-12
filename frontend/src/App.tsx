@@ -23,6 +23,7 @@ import {
   OverlayCorner,
   OverlayScale,
   OverlaySettings,
+  OVERLAY_FONT_OPTIONS,
   OVERLAY_SCALE_OPTIONS,
   Person,
   PersonRef,
@@ -2201,17 +2202,11 @@ function FrameFields({
                     )
                   }
                 >
-                  <option value="sans">Sans — Source Sans</option>
-                  <option value="serif">Serif — Source Serif</option>
-                  <option value="rounded">Rounded — Nunito</option>
-                  <option value="mono">Mono — IBM Plex</option>
-                  <option value="display">Display — Fraunces</option>
-                  <option value="script">Script — Caveat</option>
-                  <option value="slab">Slab — Zilla Slab</option>
-                  <option value="pixel">Pixel — VT323</option>
-                  <option value="hand">Hand — Patrick Hand</option>
-                  <option value="condensed">Condensed — Bebas Neue</option>
-                  <option value="segment">Segment — 7-segment clock</option>
+                  {OVERLAY_FONT_OPTIONS.map((option) => (
+                    <option value={option.value} key={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -2403,6 +2398,8 @@ function SlideshowFields({
             <option value="off">Off</option>
             <option value="subtle">Subtle</option>
             <option value="medium">Medium</option>
+            <option value="strong">Strong</option>
+            <option value="dramatic">Dramatic</option>
           </select>
         </label>
 
@@ -3168,6 +3165,11 @@ function Kiosk({ token }: { token: string }) {
           intervalSeconds={config.frame.interval_seconds}
           slideshow={slideshow}
           rotations={rotations}
+          onImageError={(assetId) => {
+            if (assetId === playlistRef.current[indexRef.current]?.id) {
+              goNext();
+            }
+          }}
         />
       )}
 
@@ -3639,6 +3641,7 @@ function KioskStage({
   intervalSeconds,
   slideshow,
   rotations = {},
+  onImageError,
 }: {
   token: string;
   asset: Asset;
@@ -3647,8 +3650,10 @@ function KioskStage({
   intervalSeconds: number;
   slideshow: SlideshowSettings;
   rotations?: Record<string, number>;
+  onImageError?: (assetId: string) => void;
 }) {
   const [layers, setLayers] = useState<StageLayer[]>([]);
+  const errorSkipRef = useRef<string | null>(null);
   const transitionMs =
     slideshow.transition === "none"
       ? 0
@@ -3665,6 +3670,7 @@ function KioskStage({
       : ({ transform: `rotate(${currentRotation}deg)` } as CSSProperties);
 
   useEffect(() => {
+    errorSkipRef.current = null;
     const url = api.kioskAssetUrl(token, asset.id);
     const nextLayer: StageLayer = {
       id: asset.id,
@@ -3700,6 +3706,12 @@ function KioskStage({
     }, transitionMs + 40);
     return () => window.clearTimeout(timer);
   }, [layers, slideshow.transition, transitionMs]);
+
+  function handleImageError(assetId: string) {
+    if (errorSkipRef.current === assetId) return;
+    errorSkipRef.current = assetId;
+    onImageError?.(assetId);
+  }
 
   return (
     <div
@@ -3742,6 +3754,11 @@ function KioskStage({
                   src={layer.url}
                   style={{ objectFit: imageFit }}
                   alt=""
+                  onError={() => {
+                    if (layer.role === "current") {
+                      handleImageError(layer.id);
+                    }
+                  }}
                 />
               </div>
             </div>

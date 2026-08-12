@@ -887,6 +887,7 @@ select:focus {
   position: absolute;
   inset: 0;
   z-index: 1;
+  overflow: hidden;
 }
 
 .kiosk-photo-rotate {
@@ -894,6 +895,7 @@ select:focus {
   inset: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 .kiosk-photo-rotate img {
@@ -975,23 +977,41 @@ select:focus {
   --pan-shift: 2.8%;
 }
 
+.kiosk-stage[data-pan="strong"] {
+  --pan-scale: 1.2;
+  --pan-shift: 5%;
+}
+
+.kiosk-stage[data-pan="dramatic"] {
+  --pan-scale: 1.32;
+  --pan-shift: 7.5%;
+}
+
 .kiosk-stage[data-pan="subtle"] .kiosk-photo.pan-1,
-.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-1 {
+.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-1,
+.kiosk-stage[data-pan="strong"] .kiosk-photo.pan-1,
+.kiosk-stage[data-pan="dramatic"] .kiosk-photo.pan-1 {
   animation: kiosk-pan-1 var(--pan-ms) linear forwards;
 }
 
 .kiosk-stage[data-pan="subtle"] .kiosk-photo.pan-2,
-.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-2 {
+.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-2,
+.kiosk-stage[data-pan="strong"] .kiosk-photo.pan-2,
+.kiosk-stage[data-pan="dramatic"] .kiosk-photo.pan-2 {
   animation: kiosk-pan-2 var(--pan-ms) linear forwards;
 }
 
 .kiosk-stage[data-pan="subtle"] .kiosk-photo.pan-3,
-.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-3 {
+.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-3,
+.kiosk-stage[data-pan="strong"] .kiosk-photo.pan-3,
+.kiosk-stage[data-pan="dramatic"] .kiosk-photo.pan-3 {
   animation: kiosk-pan-3 var(--pan-ms) linear forwards;
 }
 
 .kiosk-stage[data-pan="subtle"] .kiosk-photo.pan-4,
-.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-4 {
+.kiosk-stage[data-pan="medium"] .kiosk-photo.pan-4,
+.kiosk-stage[data-pan="strong"] .kiosk-photo.pan-4,
+.kiosk-stage[data-pan="dramatic"] .kiosk-photo.pan-4 {
   animation: kiosk-pan-4 var(--pan-ms) linear forwards;
 }
 
@@ -1557,41 +1577,115 @@ label.checkbox input {
   --overlay-font: "Source Sans 3", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
-.kiosk[data-font="serif"] {
-  --overlay-font: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+.kiosk[data-font="modern"] {
+  --overlay-font: "DM Sans", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+.kiosk[data-font="geometric"] {
+  --overlay-font: "Outfit", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+}
+
+.kiosk[data-font="soft"] {
+  --overlay-font: "Quicksand", "Avenir Next", ui-rounded, system-ui, sans-serif;
+}
+
+.kiosk[data-font="light"] {
+  --overlay-font: "Josefin Sans", "Futura", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.03em;
 }
 
 .kiosk[data-font="rounded"] {
   --overlay-font: "Nunito", "Avenir Next", ui-rounded, system-ui, sans-serif;
 }
 
-.kiosk[data-font="mono"] {
-  --overlay-font: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+.kiosk[data-font="friendly"] {
+  --overlay-font: "Fredoka", "Nunito", ui-rounded, system-ui, sans-serif;
+}
+
+.kiosk[data-font="serif"] {
+  --overlay-font: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+}
+
+.kiosk[data-font="elegant"] {
+  --overlay-font: "Cormorant Garamond", "Palatino Linotype", Georgia, serif;
+}
+
+.kiosk[data-font="editorial"] {
+  --overlay-font: "Libre Baskerville", "Iowan Old Style", Georgia, serif;
+}
+
+.kiosk[data-font="newspaper"] {
+  --overlay-font: "Playfair Display", "Times New Roman", Georgia, serif;
 }
 
 .kiosk[data-font="display"] {
   --overlay-font: "Fraunces", "Source Serif 4", Georgia, serif;
 }
 
-.kiosk[data-font="script"] {
-  --overlay-font: "Caveat", "Segoe Script", "Bradley Hand", cursive;
+.kiosk[data-font="gothic"] {
+  --overlay-font: "Cinzel", "Trajan Pro", "Times New Roman", serif;
+  letter-spacing: 0.06em;
 }
 
 .kiosk[data-font="slab"] {
   --overlay-font: "Zilla Slab", "Rockwell", "Courier New", serif;
 }
 
+.kiosk[data-font="condensed"] {
+  --overlay-font: "Bebas Neue", "Arial Narrow", Impact, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.kiosk[data-font="tall"] {
+  --overlay-font: "Oswald", "Arial Narrow", Impact, sans-serif;
+  letter-spacing: 0.03em;
+}
+
+.kiosk[data-font="poster"] {
+  --overlay-font: "Anton", Impact, "Arial Black", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.kiosk[data-font="mono"] {
+  --overlay-font: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.kiosk[data-font="tech"] {
+  --overlay-font: "Orbitron", "Eurostile", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.kiosk[data-font="typewriter"] {
+  --overlay-font: "Special Elite", "Courier New", ui-monospace, monospace;
+}
+
 .kiosk[data-font="pixel"] {
   --overlay-font: "VT323", "Courier New", ui-monospace, monospace;
+}
+
+.kiosk[data-font="script"] {
+  --overlay-font: "Caveat", "Segoe Script", "Bradley Hand", cursive;
+}
+
+.kiosk[data-font="calligraphy"] {
+  --overlay-font: "Great Vibes", "Segoe Script", "Apple Chancery", cursive;
 }
 
 .kiosk[data-font="hand"] {
   --overlay-font: "Patrick Hand", "Comic Sans MS", cursive;
 }
 
-.kiosk[data-font="condensed"] {
-  --overlay-font: "Bebas Neue", "Arial Narrow", Impact, sans-serif;
-  letter-spacing: 0.04em;
+.kiosk[data-font="brush"] {
+  --overlay-font: "Permanent Marker", "Comic Sans MS", cursive;
+}
+
+.kiosk[data-font="chalkboard"] {
+  --overlay-font: "Architects Daughter", "Comic Sans MS", cursive;
+}
+
+.kiosk[data-font="artdeco"] {
+  --overlay-font: "Poiret One", "Futura", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.08em;
 }
 
 .kiosk[data-font="segment"] {

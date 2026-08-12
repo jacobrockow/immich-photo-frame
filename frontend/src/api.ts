@@ -40,7 +40,55 @@ export type OverlayFont =
   | "pixel"
   | "hand"
   | "condensed"
-  | "segment";
+  | "segment"
+  | "modern"
+  | "geometric"
+  | "soft"
+  | "light"
+  | "elegant"
+  | "editorial"
+  | "newspaper"
+  | "gothic"
+  | "tall"
+  | "poster"
+  | "tech"
+  | "typewriter"
+  | "calligraphy"
+  | "brush"
+  | "friendly"
+  | "artdeco"
+  | "chalkboard";
+
+export const OVERLAY_FONT_OPTIONS: { value: OverlayFont; label: string }[] = [
+  { value: "sans", label: "Sans — Source Sans" },
+  { value: "modern", label: "Modern — DM Sans" },
+  { value: "geometric", label: "Geometric — Outfit" },
+  { value: "soft", label: "Soft — Quicksand" },
+  { value: "light", label: "Light — Josefin Sans" },
+  { value: "rounded", label: "Rounded — Nunito" },
+  { value: "friendly", label: "Friendly — Fredoka" },
+  { value: "serif", label: "Serif — Source Serif" },
+  { value: "elegant", label: "Elegant — Cormorant" },
+  { value: "editorial", label: "Editorial — Libre Baskerville" },
+  { value: "newspaper", label: "Newspaper — Playfair" },
+  { value: "display", label: "Display — Fraunces" },
+  { value: "gothic", label: "Gothic — Cinzel" },
+  { value: "slab", label: "Slab — Zilla Slab" },
+  { value: "condensed", label: "Condensed — Bebas Neue" },
+  { value: "tall", label: "Tall — Oswald" },
+  { value: "poster", label: "Poster — Anton" },
+  { value: "mono", label: "Mono — IBM Plex" },
+  { value: "tech", label: "Tech — Orbitron" },
+  { value: "typewriter", label: "Typewriter — Special Elite" },
+  { value: "pixel", label: "Pixel — VT323" },
+  { value: "script", label: "Script — Caveat" },
+  { value: "calligraphy", label: "Calligraphy — Great Vibes" },
+  { value: "hand", label: "Hand — Patrick Hand" },
+  { value: "brush", label: "Brush — Permanent Marker" },
+  { value: "chalkboard", label: "Chalkboard — Architects Daughter" },
+  { value: "artdeco", label: "Art deco — Poiret One" },
+  { value: "segment", label: "Segment — 7-segment clock" },
+];
 
 export type OverlayTextColor = "white" | "warm" | "amber" | "mint" | "soft";
 export type OverlayContrast = "none" | "soft" | "heavy" | "pill" | "bar";
@@ -113,7 +161,7 @@ export const defaultContext: ContextFilters = {
 export type SlideshowSettings = {
   transition: "none" | "fade" | "crossfade";
   transition_speed: "fast" | "medium" | "slow";
-  pan: "off" | "subtle" | "medium";
+  pan: "off" | "subtle" | "medium" | "strong" | "dramatic";
   backdrop: "black" | "blur" | "glow";
 };
 

@@ -65,8 +65,8 @@ Then open:
 - Device setup: http://localhost:5173/setup
 - API docs: http://localhost:8000/docs
 
-The local stack publishes both the UI (`5173`) and the API (`8000`). The
-frontend is built to call `http://localhost:8000`.
+The local stack publishes the UI (`5173`) and API (`8000`). The browser calls
+same-origin `/api` on `:5173` (Nginx proxies to the backend), matching production.
 
 ### Option 2: Development mode
 

@@ -38,7 +38,7 @@ Self-hosted digital photo frame platform backed by Immich.
 **Pi:** `pi/install.sh` Chromium kiosk → `/frame` (falls through to `/setup` if unbound).
 
 **Compose:**
-- `compose.yml` — local: UI `:5173` + API `:8000`, `VITE_API_URL=http://localhost:8000`
+- `compose.yml` — local: UI `:5173`, API also on `:8000`; browser uses same-origin `/api` via Nginx (`VITE_API_URL=""`)
 - `compose.prod.yml` — production: only Nginx published; same-origin `/api` proxied to backend; SQLite on `photoframe-data`
 
 ## Architecture

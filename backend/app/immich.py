@@ -443,21 +443,47 @@ class ImmichClient:
         raise ImmichError("Unexpected response shape from Immich metadata search")
 
     async def get_thumbnail(self, asset_id: str) -> tuple[bytes, str]:
+        """
+        Fetch a web-displayable still for an asset.
+
+        Prefer Immich preview (viewer size); fall back to thumbnail when the
+        preview is missing or not yet generated.
+        """
         timeout = httpx.Timeout(30.0, connect=10.0)
+        last_error: ImmichError | None = None
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-            response = await client.get(
-                f"{self.base_url}/api/assets/{asset_id}/thumbnail",
-                params={"size": "preview"},
-                headers=self.headers,
-            )
+            for size in ("preview", "thumbnail"):
+                response = await client.get(
+                    f"{self.base_url}/api/assets/{asset_id}/thumbnail",
+                    params={"size": size},
+                    headers=self.headers,
+                )
+                if response.is_error:
+                    last_error = ImmichError(
+                        f"Immich returned HTTP {response.status_code} for asset {size}",
+                        status_code=response.status_code,
+                    )
+                    continue
+                content = response.content
+                if not content:
+                    last_error = ImmichError(
+                        f"Immich returned an empty {size} for asset",
+                        status_code=502,
+                    )
+                    continue
+                content_type = response.headers.get("content-type", "image/jpeg")
+                media_type = content_type.split(";")[0].strip() or "image/jpeg"
+                if not media_type.startswith("image/"):
+                    last_error = ImmichError(
+                        f"Immich returned non-image {media_type} for asset {size}",
+                        status_code=502,
+                    )
+                    continue
+                return content, media_type
 
-        if response.is_error:
-            raise ImmichError(
-                f"Immich returned HTTP {response.status_code} for asset thumbnail",
-                status_code=response.status_code,
-            )
-
-        return response.content, response.headers.get("content-type", "image/jpeg")
+        if last_error:
+            raise last_error
+        raise ImmichError("Immich returned no usable thumbnail for asset", status_code=502)
 
     async def archive_asset(self, asset_id: str) -> None:
         """
