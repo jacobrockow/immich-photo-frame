@@ -4,13 +4,15 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  sudo ./install.sh [--server URL] [--user USER] [--config FILE]
+  sudo ./install.sh [--server URL] [--user USER] [--config FILE] [--root PATH]
   sudo ./install.sh https://frame.example.com [username]
 
 Options:
   --server URL   Preconfigure this device for a Photo Frame server.
   --user USER    Desktop/kiosk user (default: pi, or KIOSK_USER from --config).
   --config FILE  Load builder-specific values from an env-style file.
+  --root PATH    Sandbox install into PATH instead of modifying the host OS.
+                 Package installation and systemd cleanup are skipped.
   -h, --help     Show this help.
 
 Builder config may define PHOTOFRAME_URL, DEVICE_ID, PHOTOFRAME_URL_LOCKED,
@@ -25,7 +27,7 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEVICE_CONFIG=/etc/photoframe/device.env
+INSTALL_ROOT=""
 CONFIG_FILE=""
 CLI_SERVER=""
 CLI_USER=""
@@ -45,6 +47,10 @@ while [[ $# -gt 0 ]]; do
       CONFIG_FILE="${2:-}"
       shift 2
       ;;
+    --root)
+      INSTALL_ROOT="${2:-}"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -60,6 +66,20 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "${INSTALL_ROOT}" ]]; then
+  INSTALL_ROOT="$(realpath -m "${INSTALL_ROOT}")"
+  mkdir -p "${INSTALL_ROOT}"
+  SANDBOX=true
+else
+  SANDBOX=false
+fi
+
+root_path() {
+  printf '%s%s' "${INSTALL_ROOT}" "$1"
+}
+
+DEVICE_CONFIG="$(root_path /etc/photoframe/device.env)"
 
 # Preserve previously provisioned device identity/config across reinstalls.
 PHOTOFRAME_URL=""
@@ -122,20 +142,27 @@ if [[ "${PHOTOFRAME_URL_LOCKED}" != "true" && "${PHOTOFRAME_URL_LOCKED}" != "fal
   exit 2
 fi
 
-USER_HOME="$(getent passwd "${KIOSK_USER}" | cut -d: -f6)"
-if [[ -z "${USER_HOME}" ]]; then
-  echo "User ${KIOSK_USER} not found" >&2
-  exit 1
-fi
-KIOSK_GROUP="$(id -gn "${KIOSK_USER}")"
+if [[ "${SANDBOX}" == true ]]; then
+  # A sandbox does not have a passwd database of its own. Mirror the target
+  # layout beneath --root while using a predictable home path for inspection.
+  USER_HOME="/home/${KIOSK_USER}"
+  KIOSK_GROUP="${KIOSK_USER}"
+else
+  USER_HOME="$(getent passwd "${KIOSK_USER}" | cut -d: -f6)"
+  if [[ -z "${USER_HOME}" ]]; then
+    echo "User ${KIOSK_USER} not found" >&2
+    exit 1
+  fi
+  KIOSK_GROUP="$(id -gn "${KIOSK_USER}")"
 
-echo "Installing Chromium…"
-apt-get update
-if ! apt-get install -y chromium; then
-  apt-get install -y chromium-browser
+  echo "Installing Chromium…"
+  apt-get update
+  if ! apt-get install -y chromium; then
+    apt-get install -y chromium-browser
+  fi
 fi
 
-install -d -m 755 /etc/photoframe
+install -d -m 755 "$(root_path /etc/photoframe)"
 cat >"${DEVICE_CONFIG}" <<EOF
 PHOTOFRAME_URL=${PHOTOFRAME_URL}
 DEVICE_ID=${DEVICE_ID}
@@ -143,46 +170,65 @@ PHOTOFRAME_URL_LOCKED=${PHOTOFRAME_URL_LOCKED}
 EOF
 chmod 644 "${DEVICE_CONFIG}"
 
-install -m 755 "${SCRIPT_DIR}/chromium-launch.sh" /usr/local/bin/photoframe-chromium.sh
-install -d -m 755 /usr/share/photoframe
-install -m 644 "${SCRIPT_DIR}/bootstrap.html" /usr/share/photoframe/bootstrap.html
+install -d -m 755 "$(root_path /usr/local/bin)"
+install -m 755 "${SCRIPT_DIR}/chromium-launch.sh" "$(root_path /usr/local/bin/photoframe-chromium.sh)"
+install -d -m 755 "$(root_path /usr/share/photoframe)"
+install -m 644 "${SCRIPT_DIR}/bootstrap.html" "$(root_path /usr/share/photoframe/bootstrap.html)"
 
 # Modern Raspberry Pi OS uses labwc/Wayland. Start Chromium from the graphical
 # session so WAYLAND_DISPLAY and XDG_RUNTIME_DIR are inherited correctly.
-LABWC_DIR="${USER_HOME}/.config/labwc"
+LABWC_DIR="$(root_path "${USER_HOME}/.config/labwc")"
 LABWC_AUTOSTART="${LABWC_DIR}/autostart"
-install -d -o "${KIOSK_USER}" -g "${KIOSK_GROUP}" "${LABWC_DIR}"
-touch "${LABWC_AUTOSTART}"
-chown "${KIOSK_USER}:${KIOSK_GROUP}" "${LABWC_AUTOSTART}"
+if [[ "${SANDBOX}" == true ]]; then
+  install -d "${LABWC_DIR}"
+  touch "${LABWC_AUTOSTART}"
+else
+  install -d -o "${KIOSK_USER}" -g "${KIOSK_GROUP}" "${LABWC_DIR}"
+  touch "${LABWC_AUTOSTART}"
+  chown "${KIOSK_USER}:${KIOSK_GROUP}" "${LABWC_AUTOSTART}"
+fi
 
 if ! grep -Fq '/usr/local/bin/photoframe-chromium.sh' "${LABWC_AUTOSTART}"; then
   printf '\n# Immich Photo Frame kiosk\n/usr/local/bin/photoframe-chromium.sh &\n' >>"${LABWC_AUTOSTART}"
 fi
 
 # Remove the legacy user-service installation if this script is rerun on a Pi
-# previously configured by an older Photo Frame installer.
-LEGACY_SERVICE="${USER_HOME}/.config/systemd/user/photoframe-kiosk.service"
+# previously configured by an older Photo Frame installer. Sandbox installs do
+# not invoke systemd or mutate the host user's runtime state.
+LEGACY_SERVICE="$(root_path "${USER_HOME}/.config/systemd/user/photoframe-kiosk.service")"
 if [[ -f "${LEGACY_SERVICE}" ]]; then
-  USER_UID="$(id -u "${KIOSK_USER}")"
-  sudo -u "${KIOSK_USER}" XDG_RUNTIME_DIR="/run/user/${USER_UID}" \
-    systemctl --user disable --now photoframe-kiosk.service 2>/dev/null || true
+  if [[ "${SANDBOX}" == false ]]; then
+    USER_UID="$(id -u "${KIOSK_USER}")"
+    sudo -u "${KIOSK_USER}" XDG_RUNTIME_DIR="/run/user/${USER_UID}" \
+      systemctl --user disable --now photoframe-kiosk.service 2>/dev/null || true
+  fi
   rm -f "${LEGACY_SERVICE}"
 fi
 
 echo
-echo "Installed Immich Photo Frame kiosk for user '${KIOSK_USER}'."
+if [[ "${SANDBOX}" == true ]]; then
+  echo "Created Photo Frame sandbox installation at ${INSTALL_ROOT}."
+else
+  echo "Installed Immich Photo Frame kiosk for user '${KIOSK_USER}'."
+fi
 echo "Device ID: ${DEVICE_ID}"
 echo "Startup: labwc Wayland autostart"
 if [[ -n "${PHOTOFRAME_URL}" ]]; then
   echo "Photo Frame server: ${PHOTOFRAME_URL}"
   echo "Server setting locked: ${PHOTOFRAME_URL_LOCKED}"
-  echo
-echo "Reboot the Pi. Chromium will open ${PHOTOFRAME_URL}/setup in kiosk mode."
-  echo "Unbound devices remain in setup; paired devices continue to their saved frame."
+  if [[ "${SANDBOX}" == false ]]; then
+    echo
+    echo "Reboot the Pi. Chromium will open ${PHOTOFRAME_URL}/setup in kiosk mode."
+    echo "Unbound devices remain in setup; paired devices continue to their saved frame."
+  fi
 else
   echo "Photo Frame server: not configured"
-  echo
-echo "Reboot the Pi. Chromium will open the local device-bootstrap placeholder."
-  echo "A later device-agent step will provide self-service Wi-Fi/server onboarding."
+  if [[ "${SANDBOX}" == false ]]; then
+    echo
+    echo "Reboot the Pi. Chromium will open the local device-bootstrap placeholder."
+    echo "A later device-agent step will provide self-service Wi-Fi/server onboarding."
+  fi
 fi
-echo "The dedicated Chromium profile persists device pairing across reboots."
+if [[ "${SANDBOX}" == false ]]; then
+  echo "The dedicated Chromium profile persists device pairing across reboots."
+fi
