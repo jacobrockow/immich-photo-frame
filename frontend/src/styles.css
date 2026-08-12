@@ -1478,6 +1478,19 @@ label.checkbox input {
   font-family: var(--overlay-font);
 }
 
+/* Large scales need a wider corner so type can grow without leaving the screen. */
+.overlay:has([data-scale="xlarge"]) {
+  --overlay-max-w: min(54vw, calc(100vw - (var(--overlay-inset-x) * 2)));
+}
+
+.overlay:has([data-scale="huge"]) {
+  --overlay-max-w: min(62vw, calc(100vw - (var(--overlay-inset-x) * 2)));
+}
+
+.overlay:has([data-scale="quarter"]) {
+  --overlay-max-w: min(72vw, calc(100vw - (var(--overlay-inset-x) * 2)));
+}
+
 /* Text/icons fade independently from pill/bar backgrounds. */
 .overlay .clock,
 .overlay .today,
@@ -1880,46 +1893,45 @@ label.checkbox input {
 .clock-block[data-scale="large"],
 .photo-meta[data-scale="large"],
 .weather-panel[data-scale="large"] {
-  --clock-size: clamp(2.8rem, 8vw, 5.4rem);
-  --meridiem-size: clamp(1.1rem, 2.6vw, 1.7rem);
-  --meta-size: clamp(1.1rem, 2.4vw, 1.65rem);
-  --weather-temp-size: clamp(1.9rem, 3.6vw, 2.4rem);
-  --weather-desc-size: clamp(1rem, 2vw, 1.25rem);
+  --clock-size: clamp(3rem, 8.5vw, 6rem);
+  --meridiem-size: clamp(1.15rem, 2.8vw, 1.85rem);
+  --meta-size: clamp(1.15rem, 2.6vw, 1.8rem);
+  --weather-temp-size: clamp(2rem, 3.8vw, 2.6rem);
+  --weather-desc-size: clamp(1.05rem, 2.1vw, 1.35rem);
   --weather-icon-size: 88px;
 }
 
 .clock-block[data-scale="xlarge"],
 .photo-meta[data-scale="xlarge"],
 .weather-panel[data-scale="xlarge"] {
-  --clock-size: clamp(3.4rem, 10vw, 7rem);
-  --meridiem-size: clamp(1.25rem, 3.1vw, 2.1rem);
-  --meta-size: clamp(1.25rem, 2.9vw, 2rem);
-  --weather-temp-size: clamp(2.3rem, 4.6vw, 3.1rem);
-  --weather-desc-size: clamp(1.1rem, 2.4vw, 1.55rem);
+  --clock-size: clamp(3.8rem, 11vw, 8rem);
+  --meridiem-size: clamp(1.35rem, 3.4vw, 2.4rem);
+  --meta-size: clamp(1.4rem, 3.2vw, 2.2rem);
+  --weather-temp-size: clamp(2.5rem, 5vw, 3.4rem);
+  --weather-desc-size: clamp(1.2rem, 2.6vw, 1.7rem);
   --weather-icon-size: min(112px, 12vw);
 }
 
 .clock-block[data-scale="huge"],
 .photo-meta[data-scale="huge"],
 .weather-panel[data-scale="huge"] {
-  --clock-size: clamp(4rem, 11vw, 10vh);
-  --meridiem-size: clamp(1.4rem, 3.4vw, 2.6vh);
-  --meta-size: clamp(1.4rem, 3.2vw, 2.8vh);
-  --weather-temp-size: clamp(2.6rem, 5.5vw, 4.8vh);
-  --weather-desc-size: clamp(1.2rem, 2.6vw, 2.1vh);
-  --weather-icon-size: min(120px, 12vh, 14vw);
+  --clock-size: clamp(5rem, 14vw, 12vh);
+  --meridiem-size: clamp(1.6rem, 4vw, 3rem);
+  --meta-size: clamp(1.7rem, 4vw, 3.2vh);
+  --weather-temp-size: clamp(3rem, 6.5vw, 5.5vh);
+  --weather-desc-size: clamp(1.35rem, 3vw, 2.4vh);
+  --weather-icon-size: min(140px, 14vh, 16vw);
 }
 
 .clock-block[data-scale="quarter"],
 .photo-meta[data-scale="quarter"],
 .weather-panel[data-scale="quarter"] {
-  /* Still “quarter-screen” presence, but sized for wide display fonts. */
-  --clock-size: clamp(4.4rem, 12vw, 14vh);
-  --meridiem-size: clamp(1.5rem, 3.8vw, 3.2vh);
-  --meta-size: clamp(1.5rem, 3.6vw, 3.4vh);
-  --weather-temp-size: clamp(2.8rem, 6vw, 6vh);
-  --weather-desc-size: clamp(1.25rem, 2.8vw, 2.4vh);
-  --weather-icon-size: min(140px, 14vh, 16vw);
+  --clock-size: clamp(6rem, 18vw, 22vh);
+  --meridiem-size: clamp(1.8rem, 5vw, 4.5vh);
+  --meta-size: clamp(2rem, 5vw, 5vh);
+  --weather-temp-size: clamp(3.6rem, 8vw, 8vh);
+  --weather-desc-size: clamp(1.5rem, 3.6vw, 3.2vh);
+  --weather-icon-size: min(180px, 18vh, 20vw);
 }
 
 .clock-block {
@@ -1949,7 +1961,7 @@ label.checkbox input {
 }
 
 .clock-time {
-  /* Viewport caps keep wide fonts (Orbitron, Marker, Vibes, …) on-screen. */
+  /* Baseline cap for medium and below; large scales raise this below. */
   font-size: min(var(--clock-size), 8.2vw);
   line-height: 1;
   white-space: nowrap;
@@ -1969,11 +1981,69 @@ label.checkbox input {
   font-size: min(var(--clock-size), 4.9vw);
 }
 
+/* Match restored token sizes — wider corner box above makes these safe. */
+.clock-block[data-scale="xlarge"] .clock-time {
+  font-size: min(var(--clock-size), 10vw);
+}
+
+.clock-block[data-scale="xlarge"][data-seconds="1"] .clock-time {
+  font-size: min(var(--clock-size), 7vw);
+}
+
+.clock-block[data-scale="xlarge"] .clock:has(.clock-meridiem) .clock-time {
+  font-size: min(var(--clock-size), 8.6vw);
+}
+
+.clock-block[data-scale="xlarge"][data-seconds="1"] .clock:has(.clock-meridiem) .clock-time {
+  font-size: min(var(--clock-size), 6.2vw);
+}
+
+.clock-block[data-scale="huge"] .clock-time {
+  font-size: min(var(--clock-size), 12.5vw);
+}
+
+.clock-block[data-scale="huge"][data-seconds="1"] .clock-time {
+  font-size: min(var(--clock-size), 8.5vw);
+}
+
+.clock-block[data-scale="huge"] .clock:has(.clock-meridiem) .clock-time {
+  font-size: min(var(--clock-size), 10.5vw);
+}
+
+.clock-block[data-scale="huge"][data-seconds="1"] .clock:has(.clock-meridiem) .clock-time {
+  font-size: min(var(--clock-size), 7.4vw);
+}
+
+.clock-block[data-scale="quarter"] .clock-time {
+  font-size: min(var(--clock-size), 15vw);
+}
+
+.clock-block[data-scale="quarter"][data-seconds="1"] .clock-time {
+  font-size: min(var(--clock-size), 10.5vw);
+}
+
+.clock-block[data-scale="quarter"] .clock:has(.clock-meridiem) .clock-time {
+  font-size: min(var(--clock-size), 13vw);
+}
+
+.clock-block[data-scale="quarter"][data-seconds="1"] .clock:has(.clock-meridiem) .clock-time {
+  font-size: min(var(--clock-size), 9vw);
+}
+
 .clock-meridiem {
   flex: 0 0 auto;
   font-size: min(var(--meridiem-size), 3.2vw);
   opacity: 0.95;
   white-space: nowrap;
+}
+
+.clock-block[data-scale="xlarge"] .clock-meridiem {
+  font-size: min(var(--meridiem-size), 4.5vw);
+}
+
+.clock-block[data-scale="huge"] .clock-meridiem,
+.clock-block[data-scale="quarter"] .clock-meridiem {
+  font-size: min(var(--meridiem-size), 5.5vw);
 }
 
 .today,
@@ -1985,6 +2055,21 @@ label.checkbox input {
   overflow-wrap: anywhere;
   word-break: break-word;
   color: var(--overlay-fg);
+}
+
+.clock-block[data-scale="xlarge"] .today,
+.photo-meta[data-scale="xlarge"] .photo-date,
+.photo-meta[data-scale="xlarge"] .photo-location {
+  font-size: min(var(--meta-size), 5vw);
+}
+
+.clock-block[data-scale="huge"] .today,
+.photo-meta[data-scale="huge"] .photo-date,
+.photo-meta[data-scale="huge"] .photo-location,
+.clock-block[data-scale="quarter"] .today,
+.photo-meta[data-scale="quarter"] .photo-date,
+.photo-meta[data-scale="quarter"] .photo-location {
+  font-size: min(var(--meta-size), 6.5vw);
 }
 
 .photo-meta {
@@ -2086,6 +2171,15 @@ label.checkbox input {
   max-width: 100%;
 }
 
+.weather-panel[data-scale="xlarge"] .weather-temp {
+  font-size: min(var(--weather-temp-size), 9.5vw);
+}
+
+.weather-panel[data-scale="huge"] .weather-temp,
+.weather-panel[data-scale="quarter"] .weather-temp {
+  font-size: min(var(--weather-temp-size), 12vw);
+}
+
 .weather-desc {
   margin-top: 2px;
   font-size: min(var(--weather-desc-size), 3.6vw);
@@ -2093,6 +2187,11 @@ label.checkbox input {
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.weather-panel[data-scale="huge"] .weather-desc,
+.weather-panel[data-scale="quarter"] .weather-desc {
+  font-size: min(var(--weather-desc-size), 4.8vw);
 }
 
 .kiosk-message {
