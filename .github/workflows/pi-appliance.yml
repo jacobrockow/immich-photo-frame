@@ -1,0 +1,23 @@
+name: Pi appliance
+
+on:
+  push:
+    paths:
+      - "pi/**"
+      - ".github/workflows/pi-appliance.yml"
+  pull_request:
+    paths:
+      - "pi/**"
+      - ".github/workflows/pi-appliance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  installer-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Run sandbox installer tests
+        run: sudo bash pi/test-install.sh
