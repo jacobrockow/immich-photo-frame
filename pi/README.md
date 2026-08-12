@@ -1,71 +1,184 @@
 # Raspberry Pi photo frame appliance
 
-Turn a Raspberry Pi into a disposable kiosk that boots into Immich Photo Frame
-setup (or an already-bound slideshow).
+Turn a Raspberry Pi into a Photo Frame appliance that boots directly into setup
+or an already-bound slideshow.
 
-## What this does
+## Design
 
-- Installs Chromium
-- Creates a kiosk systemd user service
-- Disables screen blanking
-- Hides the cursor after inactivity
-- Opens the Photo Frame server at `/frame` on boot (`/setup` if unbound)
-- Restarts Chromium if it crashes
+The physical device only needs to know the URL of its Photo Frame server. It does
+not store an Immich server URL or Immich credentials. The Photo Frame server owns
+that configuration centrally.
 
-The Pi does **not** need:
+Device-local configuration is stored in:
 
-- WireGuard
-- NFS/CIFS mounts
-- A local Immich API key
+```text
+/etc/photoframe/device.env
+```
 
-Immich credentials stay on the Photo Frame server. After setup, the browser
-stores the bound frame token in its persistent profile and opens `/frame`
-(the token is not shown in the URL).
+with values such as:
+
+```bash
+PHOTOFRAME_URL=https://frame.example.com
+DEVICE_ID=pf-a73f92c1
+PHOTOFRAME_URL_LOCKED=true
+```
+
+`DEVICE_ID` is generated automatically on first install and preserved on
+reinstall. `PHOTOFRAME_URL_LOCKED=true` indicates a builder-provisioned server
+that a future factory-reset flow should preserve.
+
+## What the installer does
+
+- Installs Chromium.
+- Creates/preserves a stable device ID.
+- Writes the persistent device configuration.
+- Installs the dedicated Chromium kiosk launcher.
+- Starts the kiosk through labwc autostart on modern Raspberry Pi OS / Wayland.
+- Uses a dedicated Chromium profile so pairing survives reboots.
+- Opens the Photo Frame server at `/setup`; an already-bound browser continues
+  automatically to its saved frame.
+- Restarts Chromium if it exits or crashes.
+- Cleans up the legacy X11/systemd-user kiosk service if present.
+
+The Pi does **not** need WireGuard, NFS/CIFS mounts, a local Immich API key, or
+the Immich server URL.
 
 ## Requirements
 
-- Raspberry Pi OS (Bookworm or newer recommended)
-- Network access to your Photo Frame server
-- A desktop/session that can run Chromium (the default Raspberry Pi desktop works)
+- Current Raspberry Pi OS / Debian with the labwc Wayland desktop session.
+- A desktop user configured for automatic graphical login.
+- Network access to the chosen Photo Frame server for a preconfigured device.
 
-## Install
+## Preconfigured device
 
-On the Pi:
+This is the recommended build path when you are preparing a frame for someone
+who should never need to know the Photo Frame server address:
 
 ```bash
-sudo ./install.sh https://frame.example.com
+sudo ./install.sh --server https://frame.example.com --user pi
 ```
 
-Replace the URL with your Photo Frame frontend origin (the host that serves the
-React app, usually port 5173 in compose, or your reverse-proxied HTTPS URL).
+The server value is marked as builder-owned (`PHOTOFRAME_URL_LOCKED=true`). On
+boot, Chromium opens `https://frame.example.com/setup`; the end user only
+completes normal frame/account pairing.
 
-Optional second argument sets the local kiosk username (default: `pi`):
+The legacy positional form remains supported:
 
 ```bash
 sudo ./install.sh https://frame.example.com pi
 ```
 
+## Builder config file
+
+For repeatable personal builds, copy the template to a private ignored file:
+
+```bash
+cp device.env.example device.env
+vim device.env
+sudo ./install.sh --config ./device.env --user pi
+```
+
+`pi/device.env` is ignored by Git, so deployment-specific URLs do not need to be
+committed to the public repository. `DEVICE_ID` may be left empty to generate
+one automatically.
+
+## Generic / self-hosted device
+
+The installer also accepts no server at all:
+
+```bash
+sudo ./install.sh --user pi
+```
+
+That produces an intentionally unprovisioned device. For now it opens a local
+bootstrap placeholder. The next appliance component will be a local device agent
+that lets an owner configure Wi-Fi and their Photo Frame server from the device
+or a phone without exposing Raspberry Pi OS.
+
+The intended finished flow is:
+
+```text
+power on
+  -> local Wi-Fi/server bootstrap when needed
+  -> Photo Frame server /setup
+  -> Immich account pairing
+  -> slideshow
+```
+
+## Testing without a clean Raspberry Pi
+
+Most installer behavior can be tested safely without modifying the host. The
+`--root` option mirrors the files that would be installed beneath a temporary
+directory and skips package installation/systemd changes:
+
+```bash
+sudo ./install.sh \
+  --root /tmp/photoframe-test \
+  --server https://frame.example.com \
+  --user pi
+
+find /tmp/photoframe-test -type f -print
+cat /tmp/photoframe-test/etc/photoframe/device.env
+cat /tmp/photoframe-test/home/pi/.config/labwc/autostart
+```
+
+Run the repository smoke tests with:
+
+```bash
+sudo bash pi/test-install.sh
+```
+
+The same smoke test runs in GitHub Actions whenever the Pi appliance files
+change. It verifies preconfigured and generic installs, persistent device IDs,
+idempotent labwc autostart, private builder configuration, and URL validation.
+
+### Interactive virtual-machine testing
+
+A normal Debian/Raspberry Pi Desktop-style x86_64 VM on a PC is useful for
+interactively testing the bootstrap UI, Chromium kiosk behavior, server pairing,
+and most of the installer. It does **not** emulate Raspberry Pi hardware, and a
+stock Debian desktop may not exactly reproduce Raspberry Pi OS's `rpd-labwc`
+session. Treat it as the fast GUI-development environment rather than the final
+hardware certification environment.
+
+For the closest GUI test, give the VM a graphical desktop with labwc/Wayland and
+Chromium, configure automatic login, then run the normal installer against the
+VM (without `--root`). The existing physical Pi remains the final integration
+test for Raspberry Pi OS-specific autostart, touchscreen behavior, GPU/display
+handling, and future Wi-Fi hotspot/client transitions.
+
+This layered approach avoids requiring a clean SD-card flash for every change:
+
+1. sandbox/CI tests validate filesystem and installer behavior;
+2. an x86_64 graphical VM validates the visible setup/kiosk experience;
+3. a physical Pi validates hardware-specific behavior before release.
+
 ## After install
 
 1. Reboot the Pi.
-2. Chromium opens `/frame` (redirects to `/setup` if unbound).
-3. Sign in with Immich on the Pi or via the QR code on a phone.
-4. The device binds and shows “Setup in progress” until settings are saved once.
-5. Reboots reopen `/frame` with the stored binding — no Immich login again.
-6. Hold on the slideshow later to edit frame settings (or use the web UI).
+2. labwc starts the Photo Frame Chromium kiosk automatically.
+3. A preconfigured device opens the server's `/setup` page.
+4. Pair the device with an Immich account, preferably using the QR/phone flow.
+5. The bound frame token remains in the dedicated Chromium profile.
+6. Future boots return automatically to the paired slideshow.
 
 ## Files
 
 ```text
 pi/
-├── install.sh
-├── photoframe-kiosk.service
+├── bootstrap.html
 ├── chromium-launch.sh
+├── device.env.example
+├── install.sh
+├── test-install.sh
+├── photoframe-kiosk.service   # legacy installer compatibility only
 └── README.md
 ```
 
 ## Reconfigure / factory reset
 
-Clear the browser profile used by the kiosk user (or remove
-`photoframe_frame_token` / `photoframe_device_key` from that profile's
-localStorage), then reopen `/setup`.
+Until the device agent implements a first-class reset flow, pairing can be reset
+by clearing the dedicated Chromium profile/localStorage. A future factory reset
+will distinguish between builder configuration and user configuration so a
+preconfigured `PHOTOFRAME_URL_LOCKED=true` server can survive a reset while Wi-Fi
+and frame pairing are cleared.
