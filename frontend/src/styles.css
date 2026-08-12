@@ -1724,40 +1724,54 @@ label.checkbox input {
 
 /*
  * Script / brush faces lean and swash outside the em-box. Don't clip them —
- * give extra inset + text padding so flourishes stay on-screen.
+ * nudge insets slightly and pad only the outer edges (not the time↔AM/PM gap).
  */
 .kiosk[data-font="calligraphy"] .overlay,
 .kiosk[data-font="script"] .overlay,
 .kiosk[data-font="brush"] .overlay {
   overflow: visible;
-  --overlay-inset-x: 52px;
-  --overlay-inset-y: 44px;
+  --overlay-inset-x: 40px;
+  --overlay-inset-y: 34px;
 }
 
 .kiosk[data-font="calligraphy"] .clock,
 .kiosk[data-font="script"] .clock,
 .kiosk[data-font="brush"] .clock {
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
+  gap: 0.12em;
 }
 
 .kiosk[data-font="calligraphy"] .clock-time,
+.kiosk[data-font="script"] .clock-time,
+.kiosk[data-font="brush"] .clock-time {
+  overflow: visible;
+  /* Leading swash only — no end padding (that pushed AM/PM away). */
+  padding-inline: 0.12em 0;
+  padding-block: 0.12em 0.18em;
+}
+
 .kiosk[data-font="calligraphy"] .clock-meridiem,
+.kiosk[data-font="script"] .clock-meridiem,
+.kiosk[data-font="brush"] .clock-meridiem {
+  overflow: visible;
+  padding: 0;
+  margin: 0;
+}
+
 .kiosk[data-font="calligraphy"] .today,
 .kiosk[data-font="calligraphy"] .photo-date,
 .kiosk[data-font="calligraphy"] .photo-location,
 .kiosk[data-font="calligraphy"] .weather-temp,
 .kiosk[data-font="calligraphy"] .weather-desc,
-.kiosk[data-font="script"] .clock-time,
 .kiosk[data-font="script"] .today,
 .kiosk[data-font="script"] .photo-date,
 .kiosk[data-font="script"] .photo-location,
-.kiosk[data-font="brush"] .clock-time,
 .kiosk[data-font="brush"] .today,
 .kiosk[data-font="brush"] .photo-date,
 .kiosk[data-font="brush"] .photo-location {
   overflow: visible;
-  padding-inline: 0.28em 0.5em;
-  padding-block: 0.22em 0.35em;
+  padding-inline: 0.1em 0.2em;
+  padding-block: 0.08em 0.14em;
 }
 
 .kiosk[data-font="calligraphy"] .clock-time,
@@ -1772,11 +1786,8 @@ label.checkbox input {
 .kiosk[data-font="calligraphy"][data-contrast="bar"] .clock-block,
 .kiosk[data-font="calligraphy"][data-contrast="bar"] .photo-meta,
 .kiosk[data-font="calligraphy"][data-contrast="bar"] .weather-panel {
-  /* Scrim needs room for italic overhang or it looks like a hard crop. */
-  padding: calc(var(--overlay-block-pad-y) + 0.2em)
-    calc(var(--overlay-block-pad-x) + 0.45em)
-    calc(var(--overlay-block-pad-y) + 0.35em)
-    calc(var(--overlay-block-pad-x) + 0.3em);
+  padding: calc(var(--overlay-block-pad-y) + 0.08em)
+    calc(var(--overlay-block-pad-x) + 0.18em);
 }
 
 /* Segment digits are much wider; give them more width but still stay on-screen. */
