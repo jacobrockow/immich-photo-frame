@@ -13,6 +13,7 @@ class AppConfig(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     default_immich_url: Mapped[str] = mapped_column(String(1024), default="")
+    immich_server_name: Mapped[str] = mapped_column(String(255), default="Immich")
     weather_api_key: Mapped[str] = mapped_column(Text, default="")
     weather_units: Mapped[str] = mapped_column(String(16), default="imperial")
 
@@ -24,6 +25,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(255), default="")
     immich_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Compatibility mirror of the single server-wide Immich URL. Runtime
+    # configuration is owned by AppConfig; users do not choose their own URL.
     immich_url: Mapped[str] = mapped_column(String(1024), default="")
     immich_api_key: Mapped[str] = mapped_column(Text, default="")
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)

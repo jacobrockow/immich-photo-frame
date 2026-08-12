@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ImmichSettingsIn(BaseModel):
+    # immich_url is retained for backward-compatible clients but ignored by the
+    # server. The admin-owned AppConfig URL is the single source of truth.
     immich_url: str = ""
     immich_api_key: str
 
@@ -12,6 +14,7 @@ class ImmichSettingsOut(BaseModel):
     immich_url: str
     api_key_configured: bool
     default_immich_url: str = ""
+    immich_server_name: str = "Immich"
 
 
 class AlbumOut(BaseModel):
@@ -219,12 +222,14 @@ class ServerSettingsOut(BaseModel):
     """Server-wide admin settings (not per-frame / per-user)."""
 
     default_immich_url: str = ""
+    immich_server_name: str = "Immich"
     weather_api_key_configured: bool = False
     weather_units: str = "imperial"
 
 
 class ServerSettingsIn(BaseModel):
     default_immich_url: str | None = None
+    immich_server_name: str | None = Field(default=None, max_length=255)
     weather_api_key: str = ""
     weather_units: str | None = Field(
         default=None,
@@ -244,6 +249,7 @@ class UserOut(BaseModel):
     id: int
     email: str
     name: str
+    # Compatibility field; always mirrors the server-wide admin setting.
     immich_url: str
     api_key_configured: bool
     is_admin: bool = False
@@ -253,6 +259,7 @@ class AdminUserOut(BaseModel):
     id: int
     email: str
     name: str
+    # Compatibility field; always mirrors the server-wide admin setting.
     immich_url: str
     api_key_configured: bool
     is_admin: bool = False
@@ -265,13 +272,15 @@ class AdminUserUpdate(BaseModel):
 
 
 class LoginPasswordIn(BaseModel):
+    # Retained for old clients; ignored by the backend.
     immich_url: str | None = None
     email: str = Field(min_length=1)
     password: str = Field(min_length=1)
 
 
 class LoginApiKeyIn(BaseModel):
-    immich_url: str
+    # Retained for old clients; ignored by the backend.
+    immich_url: str = ""
     immich_api_key: str = Field(min_length=1)
     email: str | None = None
 
@@ -288,6 +297,7 @@ class SetupStartOut(BaseModel):
     bound: bool
     frame_token: str | None = None
     default_immich_url: str = ""
+    immich_server_name: str = "Immich"
 
 
 class SetupStatusOut(BaseModel):
@@ -295,11 +305,13 @@ class SetupStatusOut(BaseModel):
     bound: bool
     frame_token: str | None = None
     default_immich_url: str = ""
+    immich_server_name: str = "Immich"
     device_name: str = "Photo Frame"
 
 
 class SetupCompletePasswordIn(BaseModel):
     setup_code: str = Field(min_length=4, max_length=16)
+    # Retained for old clients; ignored by the backend.
     immich_url: str | None = None
     email: str = Field(min_length=1)
     password: str = Field(min_length=1)
@@ -308,7 +320,8 @@ class SetupCompletePasswordIn(BaseModel):
 
 class SetupCompleteApiKeyIn(BaseModel):
     setup_code: str = Field(min_length=4, max_length=16)
-    immich_url: str
+    # Retained for old clients; ignored by the backend.
+    immich_url: str = ""
     immich_api_key: str = Field(min_length=1)
     frame_name: str | None = None
 

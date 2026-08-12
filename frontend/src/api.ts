@@ -240,6 +240,7 @@ export type WeatherSettings = {
 
 export type ServerSettings = {
   default_immich_url: string;
+  immich_server_name?: string;
   weather_api_key_configured: boolean;
   weather_units: "imperial" | "metric";
 };
@@ -276,6 +277,7 @@ export type ImmichSettings = {
   immich_url: string;
   api_key_configured: boolean;
   default_immich_url: string;
+  immich_server_name?: string;
 };
 
 const FRAME_TOKEN_HEADER = "X-Frame-Token";
@@ -324,6 +326,7 @@ export const api = {
   publicConfig: () =>
     request<{
       default_immich_url: string;
+      immich_server_name?: string;
       weather_configured?: boolean;
       weather_units?: string;
     }>("/api/config"),
@@ -332,6 +335,7 @@ export const api = {
 
   saveServerSettings: (payload: {
     default_immich_url?: string;
+    immich_server_name?: string;
     weather_api_key?: string;
     weather_units?: "imperial" | "metric";
   }) =>
@@ -353,6 +357,8 @@ export const api = {
 
   me: () => request<User>("/api/auth/me"),
 
+  // Legacy signatures are retained so older UI code still compiles. The backend
+  // ignores immich_url and always uses the server-wide administrator setting.
   loginPassword: (immich_url: string, email: string, password: string) =>
     request<User>("/api/auth/login/password", {
       method: "POST",
@@ -365,7 +371,10 @@ export const api = {
       body: JSON.stringify({ immich_url, immich_api_key }),
     }),
 
-  logout: () => request<void>("/api/auth/logout", { method: "POST" }),
+  logout: async () => {
+    await request<void>("/api/auth/logout", { method: "POST" });
+    window.dispatchEvent(new Event("photoframe-auth-changed"));
+  },
 
   getImmichSettings: () => request<ImmichSettings>("/api/me/immich"),
 
@@ -432,6 +441,7 @@ export const api = {
       bound: boolean;
       frame_token: string | null;
       default_immich_url: string;
+      immich_server_name?: string;
     }>("/api/setup/start", {
       method: "POST",
       body: JSON.stringify({ device_key, name }),
@@ -443,6 +453,7 @@ export const api = {
       bound: boolean;
       frame_token: string | null;
       default_immich_url: string;
+      immich_server_name?: string;
       device_name: string;
     }>(`/api/setup/${encodeURIComponent(setup_code)}`),
 

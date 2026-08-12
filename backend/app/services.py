@@ -11,49 +11,7 @@ from .models import AppConfig, Device, Frame, Settings, User
 
 DEFAULT_IMMICH_URL = os.getenv("DEFAULT_IMMICH_URL", "https://immich.example.com")
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
-ALLOW_CUSTOM_IMMICH_URLS = os.getenv("ALLOW_CUSTOM_IMMICH_URLS", "false").strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
 SETUP_CODE_TTL_MINUTES = 30
-
-
-def get_app_config(db: Session) -> AppConfig:
-    config = db.get(AppConfig, 1)
-    if config is None:
-        config = AppConfig(
-            id=1,
-            default_immich_url=DEFAULT_IMMICH_URL,
-            weather_api_key=OPENWEATHER_API_KEY,
-            weather_units="imperial",
-        )
-        legacy = db.get(Settings, 1)
-        if legacy and legacy.immich_url:
-            config.default_immich_url = legacy.immich_url
-        db.add(config)
-        db.commit()
-        db.refresh(config)
-    else:
-        changed = False
-        if not config.default_immich_url:
-            config.default_immich_url = DEFAULT_IMMICH_URL
-            changed = True
-        if not getattr(config, "weather_api_key", None) and OPENWEATHER_API_KEY:
-            config.weather_api_key = OPENWEATHER_API_KEY
-            changed = True
-        if not getattr(config, "weather_units", None):
-            config.weather_units = "imperial"
-            changed = True
-        if changed:
-            db.commit()
-            db.refresh(config)
-    return config
-
-
-def weather_api_key(config: AppConfig) -> str:
-    return (config.weather_api_key or OPENWEATHER_API_KEY or "").strip()
 
 
 def normalize_immich_url(value: str) -> str:
@@ -80,18 +38,73 @@ def normalize_immich_url(value: str) -> str:
     return urlunsplit((parsed.scheme.lower(), netloc, "", "", ""))
 
 
-def allowed_immich_url(db: Session, requested_url: str) -> str:
-    """Prevent public auth/setup endpoints from becoming arbitrary HTTP proxies."""
-    requested = normalize_immich_url(requested_url)
-    if ALLOW_CUSTOM_IMMICH_URLS:
-        return requested
-    configured = normalize_immich_url(get_app_config(db).default_immich_url or "")
-    if requested != configured:
-        raise HTTPException(
-            status_code=400,
-            detail="Immich URL must match this server's configured Immich instance",
+def sync_user_immich_urls(db: Session, config: AppConfig) -> None:
+    """Keep the legacy per-user URL column aligned to the server-wide setting."""
+    server_url = normalize_immich_url(config.default_immich_url or "")
+    changed = False
+    for user in db.query(User).all():
+        if user.immich_url != server_url:
+            user.immich_url = server_url
+            changed = True
+    if changed:
+        db.commit()
+
+
+def get_app_config(db: Session) -> AppConfig:
+    config = db.get(AppConfig, 1)
+    if config is None:
+        config = AppConfig(
+            id=1,
+            default_immich_url=DEFAULT_IMMICH_URL,
+            immich_server_name="Immich",
+            weather_api_key=OPENWEATHER_API_KEY,
+            weather_units="imperial",
         )
-    return requested
+        legacy = db.get(Settings, 1)
+        if legacy and legacy.immich_url:
+            config.default_immich_url = legacy.immich_url
+        config.default_immich_url = normalize_immich_url(config.default_immich_url)
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    else:
+        changed = False
+        if not config.default_immich_url:
+            config.default_immich_url = DEFAULT_IMMICH_URL
+            changed = True
+        normalized = normalize_immich_url(config.default_immich_url)
+        if config.default_immich_url != normalized:
+            config.default_immich_url = normalized
+            changed = True
+        if not getattr(config, "immich_server_name", None):
+            config.immich_server_name = "Immich"
+            changed = True
+        if not getattr(config, "weather_api_key", None) and OPENWEATHER_API_KEY:
+            config.weather_api_key = OPENWEATHER_API_KEY
+            changed = True
+        if not getattr(config, "weather_units", None):
+            config.weather_units = "imperial"
+            changed = True
+        if changed:
+            db.commit()
+            db.refresh(config)
+
+    sync_user_immich_urls(db, config)
+    return config
+
+
+def configured_immich_url(db: Session) -> str:
+    config = get_app_config(db)
+    if not config.default_immich_url:
+        raise HTTPException(
+            status_code=503,
+            detail="Immich server is not configured by an administrator",
+        )
+    return normalize_immich_url(config.default_immich_url)
+
+
+def weather_api_key(config: AppConfig) -> str:
+    return (config.weather_api_key or OPENWEATHER_API_KEY or "").strip()
 
 
 def migrate_legacy_immich_credentials(db: Session) -> None:
@@ -104,7 +117,7 @@ def migrate_legacy_immich_credentials(db: Session) -> None:
     user = User(
         email="migrated@local",
         name="Migrated user",
-        immich_url=legacy.immich_url.rstrip("/"),
+        immich_url=configured_immich_url(db),
         immich_api_key=legacy.immich_api_key,
         is_admin=True,
     )
@@ -118,6 +131,7 @@ def migrate_legacy_immich_credentials(db: Session) -> None:
 
 def user_to_out(user: User):
     from .schemas import UserOut
+
     return UserOut(
         id=user.id,
         email=user.email,
@@ -141,9 +155,12 @@ async def connect_with_password(
     email: str,
     password: str,
 ) -> User:
-    immich_url = allowed_immich_url(db, immich_url)
+    # Keep the argument for backward-compatible callers, but never trust a
+    # client-selected network destination. The admin setting is authoritative.
+    del immich_url
+    server_url = configured_immich_url(db)
     try:
-        client, login_data = await ImmichClient.login(immich_url, email, password)
+        client, login_data = await ImmichClient.login(server_url, email, password)
         me = await client.get_my_user()
         try:
             api_key = await client.create_api_key()
@@ -162,7 +179,7 @@ async def connect_with_password(
         email=me.get("email") or email,
         name=me.get("name") or me.get("email") or email,
         immich_user_id=str(me.get("id")) if me.get("id") else login_data.get("userId"),
-        immich_url=immich_url,
+        immich_url=server_url,
         immich_api_key=api_key,
     )
 
@@ -174,8 +191,11 @@ async def connect_with_api_key(
     immich_api_key: str,
     email_hint: str | None = None,
 ) -> User:
-    immich_url = allowed_immich_url(db, immich_url)
-    client = ImmichClient(immich_url, api_key=immich_api_key.strip())
+    # Keep the argument for backward-compatible callers, but never trust a
+    # client-selected network destination. The admin setting is authoritative.
+    del immich_url
+    server_url = configured_immich_url(db)
+    client = ImmichClient(server_url, api_key=immich_api_key.strip())
     try:
         me = await client.get_my_user()
         await client.ping()
@@ -187,7 +207,7 @@ async def connect_with_api_key(
         email=email,
         name=me.get("name") or email,
         immich_user_id=str(me.get("id")) if me.get("id") else None,
-        immich_url=immich_url,
+        immich_url=server_url,
         immich_api_key=immich_api_key.strip(),
     )
 
@@ -210,7 +230,7 @@ def upsert_user(
     user.email = email.lower()
     user.name = name
     user.immich_user_id = immich_user_id
-    user.immich_url = immich_url
+    user.immich_url = normalize_immich_url(immich_url)
     user.immich_api_key = immich_api_key
     db.commit()
     db.refresh(user)
@@ -278,4 +298,3 @@ def bind_device_to_frame(db: Session, device: Device, frame: Frame) -> Device:
     device.last_seen_at = datetime.utcnow()
     db.commit()
     db.refresh(device)
-    return device
