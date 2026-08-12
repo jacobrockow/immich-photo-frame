@@ -1679,6 +1679,24 @@ label.checkbox input {
 
 .kiosk[data-font="calligraphy"] {
   --overlay-font: "Great Vibes", "Segoe Script", "Apple Chancery", cursive;
+  /* Tight, dark edge — big blurs look like a second “ghost” glyph on thin scripts. */
+  --overlay-shadow: 0 1px 1px rgba(0, 0, 0, 0.95), 0 2px 6px rgba(0, 0, 0, 0.55);
+  --overlay-glow: none;
+}
+
+.kiosk[data-font="calligraphy"][data-contrast="soft"] {
+  --overlay-shadow: 0 1px 1px rgba(0, 0, 0, 0.95), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.kiosk[data-font="calligraphy"][data-contrast="heavy"] {
+  --overlay-shadow:
+    0 0 1px rgba(0, 0, 0, 1),
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 3px 8px rgba(0, 0, 0, 0.65);
+}
+
+.kiosk[data-font="calligraphy"][data-contrast="none"] {
+  --overlay-shadow: none;
 }
 
 .kiosk[data-font="hand"] {
@@ -1702,6 +1720,63 @@ label.checkbox input {
   /* Readable sans for weather / photo meta; digits use DSEG below. */
   --overlay-font: "Source Sans 3", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
   --clock-font: "DSEG7 Classic", "DSEG7Classic", ui-monospace, monospace;
+}
+
+/*
+ * Script / brush faces lean and swash outside the em-box. Don't clip them —
+ * give extra inset + text padding so flourishes stay on-screen.
+ */
+.kiosk[data-font="calligraphy"] .overlay,
+.kiosk[data-font="script"] .overlay,
+.kiosk[data-font="brush"] .overlay {
+  overflow: visible;
+  --overlay-inset-x: 52px;
+  --overlay-inset-y: 44px;
+}
+
+.kiosk[data-font="calligraphy"] .clock,
+.kiosk[data-font="script"] .clock,
+.kiosk[data-font="brush"] .clock {
+  letter-spacing: 0.04em;
+}
+
+.kiosk[data-font="calligraphy"] .clock-time,
+.kiosk[data-font="calligraphy"] .clock-meridiem,
+.kiosk[data-font="calligraphy"] .today,
+.kiosk[data-font="calligraphy"] .photo-date,
+.kiosk[data-font="calligraphy"] .photo-location,
+.kiosk[data-font="calligraphy"] .weather-temp,
+.kiosk[data-font="calligraphy"] .weather-desc,
+.kiosk[data-font="script"] .clock-time,
+.kiosk[data-font="script"] .today,
+.kiosk[data-font="script"] .photo-date,
+.kiosk[data-font="script"] .photo-location,
+.kiosk[data-font="brush"] .clock-time,
+.kiosk[data-font="brush"] .today,
+.kiosk[data-font="brush"] .photo-date,
+.kiosk[data-font="brush"] .photo-location {
+  overflow: visible;
+  padding-inline: 0.28em 0.5em;
+  padding-block: 0.22em 0.35em;
+}
+
+.kiosk[data-font="calligraphy"] .clock-time,
+.kiosk[data-font="calligraphy"] .weather-temp {
+  /* Avoid stacking the generic glow on top of the custom soft edge. */
+  text-shadow: var(--overlay-shadow);
+}
+
+.kiosk[data-font="calligraphy"][data-contrast="pill"] .clock-block,
+.kiosk[data-font="calligraphy"][data-contrast="pill"] .photo-meta,
+.kiosk[data-font="calligraphy"][data-contrast="pill"] .weather-panel,
+.kiosk[data-font="calligraphy"][data-contrast="bar"] .clock-block,
+.kiosk[data-font="calligraphy"][data-contrast="bar"] .photo-meta,
+.kiosk[data-font="calligraphy"][data-contrast="bar"] .weather-panel {
+  /* Scrim needs room for italic overhang or it looks like a hard crop. */
+  padding: calc(var(--overlay-block-pad-y) + 0.2em)
+    calc(var(--overlay-block-pad-x) + 0.45em)
+    calc(var(--overlay-block-pad-y) + 0.35em)
+    calc(var(--overlay-block-pad-x) + 0.3em);
 }
 
 /* Segment digits are much wider; give them more width but still stay on-screen. */
@@ -1868,7 +1943,6 @@ label.checkbox input {
   line-height: 1;
   white-space: nowrap;
   max-width: 100%;
-  overflow: hidden;
   text-shadow: var(--overlay-shadow), var(--overlay-glow);
 }
 
@@ -1934,6 +2008,11 @@ label.checkbox input {
     0 2px 14px rgba(0, 0, 0, 0.75);
 }
 
+.kiosk[data-font="calligraphy"][data-contrast="soft"] .weather-panel,
+.kiosk[data-font="calligraphy"][data-contrast="heavy"] .weather-panel {
+  text-shadow: var(--overlay-shadow);
+}
+
 .kiosk[data-contrast="none"] .weather-panel,
 .kiosk[data-contrast="pill"] .weather-panel,
 .kiosk[data-contrast="bar"] .weather-panel {
@@ -1944,6 +2023,12 @@ label.checkbox input {
 .kiosk[data-contrast="bar"] .clock-time,
 .kiosk[data-contrast="none"] .clock-time {
   text-shadow: var(--overlay-glow);
+}
+
+.kiosk[data-font="calligraphy"][data-contrast="pill"] .clock-time,
+.kiosk[data-font="calligraphy"][data-contrast="bar"] .clock-time,
+.kiosk[data-font="calligraphy"][data-contrast="none"] .clock-time {
+  text-shadow: var(--overlay-shadow);
 }
 
 .overlay.align-end .weather-panel {
@@ -1988,7 +2073,6 @@ label.checkbox input {
   line-height: 1.1;
   white-space: nowrap;
   max-width: 100%;
-  overflow: hidden;
 }
 
 .weather-desc {
