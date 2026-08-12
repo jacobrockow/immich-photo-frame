@@ -1474,7 +1474,8 @@ label.checkbox input {
   max-width: var(--overlay-max-w);
   max-height: var(--overlay-max-h);
   min-width: 0;
-  overflow: hidden;
+  /* Visible so soft/heavy text-shadows aren't cropped mid-blur. */
+  overflow: visible;
   font-family: var(--overlay-font);
 }
 
@@ -1519,6 +1520,7 @@ label.checkbox input {
   min-height: 0;
   width: max-content;
   max-width: 100%;
+  overflow: visible;
 }
 
 .kiosk[data-contrast="pill"] .clock-block::before,
@@ -1736,13 +1738,12 @@ label.checkbox input {
 }
 
 /*
- * Script / brush faces lean and swash outside the em-box. Don't clip them —
- * nudge insets slightly and pad only the outer edges (not the time↔AM/PM gap).
+ * Script / brush faces lean and swash outside the em-box.
+ * Nudge insets slightly and pad only the outer edges (not the time↔AM/PM gap).
  */
 .kiosk[data-font="calligraphy"] .overlay,
 .kiosk[data-font="script"] .overlay,
 .kiosk[data-font="brush"] .overlay {
-  overflow: visible;
   --overlay-inset-x: 40px;
   --overlay-inset-y: 34px;
 }
@@ -1866,6 +1867,7 @@ label.checkbox input {
   box-sizing: border-box;
   max-width: 100%;
   min-width: 0;
+  overflow: visible;
 }
 
 .clock-block[data-scale="xsmall"],
