@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+pi/device.env
+!pi/device.env.example
 __pycache__/
 *.py[cod]
 .venv/
