@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photo Frame Setup</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b0d10; color: #f4f4f2; }
+    main { width: min(680px, calc(100vw - 48px)); text-align: center; }
+    .icon { font-size: 64px; margin-bottom: 18px; }
+    h1 { margin: 0 0 14px; font-size: clamp(32px, 6vw, 52px); }
+    p { color: #b9bdc5; font-size: clamp(18px, 3vw, 24px); line-height: 1.5; }
+    code { color: #fff; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="icon">▣</div>
+    <h1>Photo Frame needs setup</h1>
+    <p>This device has not been linked to a Photo Frame server yet.</p>
+    <p>The local network and server setup experience is coming next. For now, the device builder can provision a server with <code>install.sh --server …</code>.</p>
+  </main>
+</body>
+</html>
