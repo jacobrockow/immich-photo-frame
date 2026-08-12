@@ -40,12 +40,8 @@ that a future factory-reset flow should preserve.
 - Restarts Chromium if it exits or crashes.
 - Cleans up the legacy X11/systemd-user kiosk service if present.
 
-The Pi does **not** need:
-
-- WireGuard
-- NFS/CIFS mounts
-- a local Immich API key
-- the Immich server URL
+The Pi does **not** need WireGuard, NFS/CIFS mounts, a local Immich API key, or
+the Immich server URL.
 
 ## Requirements
 
@@ -63,13 +59,8 @@ sudo ./install.sh --server https://frame.example.com --user pi
 ```
 
 The server value is marked as builder-owned (`PHOTOFRAME_URL_LOCKED=true`). On
-boot, Chromium opens:
-
-```text
-https://frame.example.com/setup
-```
-
-The end user only completes normal frame/account pairing.
+boot, Chromium opens `https://frame.example.com/setup`; the end user only
+completes normal frame/account pairing.
 
 The legacy positional form remains supported:
 
@@ -88,18 +79,8 @@ sudo ./install.sh --config ./device.env --user pi
 ```
 
 `pi/device.env` is ignored by Git, so deployment-specific URLs do not need to be
-committed to the public repository.
-
-A builder config may define:
-
-```bash
-PHOTOFRAME_URL=https://frame.example.com
-DEVICE_ID=
-PHOTOFRAME_URL_LOCKED=true
-KIOSK_USER=pi
-```
-
-`DEVICE_ID` may be left empty to generate one automatically.
+committed to the public repository. `DEVICE_ID` may be left empty to generate
+one automatically.
 
 ## Generic / self-hosted device
 
@@ -124,6 +105,54 @@ power on
   -> slideshow
 ```
 
+## Testing without a clean Raspberry Pi
+
+Most installer behavior can be tested safely without modifying the host. The
+`--root` option mirrors the files that would be installed beneath a temporary
+directory and skips package installation/systemd changes:
+
+```bash
+sudo ./install.sh \
+  --root /tmp/photoframe-test \
+  --server https://frame.example.com \
+  --user pi
+
+find /tmp/photoframe-test -type f -print
+cat /tmp/photoframe-test/etc/photoframe/device.env
+cat /tmp/photoframe-test/home/pi/.config/labwc/autostart
+```
+
+Run the repository smoke tests with:
+
+```bash
+sudo bash pi/test-install.sh
+```
+
+The same smoke test runs in GitHub Actions whenever the Pi appliance files
+change. It verifies preconfigured and generic installs, persistent device IDs,
+idempotent labwc autostart, private builder configuration, and URL validation.
+
+### Interactive virtual-machine testing
+
+A normal Debian/Raspberry Pi Desktop-style x86_64 VM on a PC is useful for
+interactively testing the bootstrap UI, Chromium kiosk behavior, server pairing,
+and most of the installer. It does **not** emulate Raspberry Pi hardware, and a
+stock Debian desktop may not exactly reproduce Raspberry Pi OS's `rpd-labwc`
+session. Treat it as the fast GUI-development environment rather than the final
+hardware certification environment.
+
+For the closest GUI test, give the VM a graphical desktop with labwc/Wayland and
+Chromium, configure automatic login, then run the normal installer against the
+VM (without `--root`). The existing physical Pi remains the final integration
+test for Raspberry Pi OS-specific autostart, touchscreen behavior, GPU/display
+handling, and future Wi-Fi hotspot/client transitions.
+
+This layered approach avoids requiring a clean SD-card flash for every change:
+
+1. sandbox/CI tests validate filesystem and installer behavior;
+2. an x86_64 graphical VM validates the visible setup/kiosk experience;
+3. a physical Pi validates hardware-specific behavior before release.
+
 ## After install
 
 1. Reboot the Pi.
@@ -141,6 +170,7 @@ pi/
 ├── chromium-launch.sh
 ├── device.env.example
 ├── install.sh
+├── test-install.sh
 ├── photoframe-kiosk.service   # legacy installer compatibility only
 └── README.md
 ```
